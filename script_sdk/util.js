@@ -1,4 +1,4 @@
-Math.sign = function(val)
+Math.sign = Math.sign || function(val)
 {
 	if (val < 0)
 		return -1;
@@ -48,38 +48,32 @@ Math.angleBetween = function(n, a, b)
 	return a <= n || n <= b;
 }
 
-String.prototype.trim =
-	String.prototype.trim ||
-	function trim()
-	{
-		return this.replace(/^\s\s*/, '').replace(/\s\s*$/, '');
-	};
+String.prototype.trim = String.prototype.trim || function trim()
+{
+	return this.replace(/^\s\s*/, '').replace(/\s\s*$/, '');
+};
 
-Array.prototype.remove =
-	Array.prototype.remove ||
-	function remove(object)
+Array.prototype.remove = Array.prototype.remove || function remove(object)
+{
+	for (var c = 0; c < this.length; c++)
 	{
-		for (var c = 0; c < this.length; c++)
+		if (this[c] === object)
 		{
-			if (this[c] === object)
-			{
-				this.splice(c, 1);
-				return;
-			}
+			this.splice(c, 1);
+			return;
 		}
-	};
+	}
+};
 
-Array.prototype.contains =
-	Array.prototype.contains ||
-	function contains(object)
+Array.prototype.contains = Array.prototype.contains || function contains(object)
+{
+	for (var c = 0; c < this.length; c++)
 	{
-		for (var c = 0; c < this.length; c++)
-		{
-			if (this[c] === object)
-				return true;
-		}
-		return false;
-	};
+		if (this[c] === object)
+			return true;
+	}
+	return false;
+};
 
 Vector2 = function(x, y)
 {

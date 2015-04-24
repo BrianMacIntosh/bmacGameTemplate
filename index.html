@@ -2,14 +2,14 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 
 <head>
-<title>Game Title</title>
+<title>Game_Title</title>
 
-<meta property="og:title" content="Game Title">
+<meta property="og:title" content="Game_Title">
 <meta property="og:url" content="http://www.brianmacintosh.com/game_url/">
 <meta property="og:site_name" content="Games by Brian MacIntosh">
 <meta property="og:type" content="website">
-<meta property="og:image" content="http://brianmacintosh.com/game_icon">
-<meta property="og:description" content="Game Description">
+<meta property="og:image" content="http://brianmacintosh.com/og_icon.png">
+<meta property="og:description" content="Game_Description">
 
 <link rel="stylesheet" href="style.css" type="text/css"/>
 <link rel="image_src" href="http://brianmacintosh.com/game_icon" />
@@ -17,52 +17,52 @@
 
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 
-<meta name="keywords" content="brian macintosh, video game, game, html5, javascript">
-<meta name="description" content="Game Description">
+<meta name="keywords" content="brian macintosh,video game,game,html5,javascript">
+<meta name="description" content="Game_Description">
 
 <script id="frag_simple" type="x-shader/x-fragment">
-	uniform sampler2D uTexture;
-	varying vec2 vUv;
-	void main(void)
-	{
-		gl_FragColor = texture2D(uTexture, vUv);
-	}
+uniform sampler2D uTexture;
+varying vec2 vUv;
+void main(void)
+{
+	gl_FragColor = texture2D(uTexture, vUv);
+}
 </script>
 <script id="vert_simple" type="x-shader/x-vertex">
-	varying vec2 vUv;
-	void main()
-	{
-		vUv = uv;
-		gl_Position = projectionMatrix * (modelViewMatrix * vec4(position,1.0));
-	}
+varying vec2 vUv;
+void main()
+{
+	vUv = uv;
+	gl_Position = projectionMatrix * (modelViewMatrix * vec4(position,1.0));
+}
 </script>
 <script id="frag_spritesheet" type="x-shader/x-fragment">
-	uniform sampler2D uTexture;
-	uniform float uFrame;
-	uniform float uFramesU;
-	uniform float uFramesV
-	varying vec2 vUv;
-	void main(void)
-	{
-		float fx = uFrame % uFramesU;
-		float fy = floor(uFrame / uFramesU);
-		
-		vec2 uv;
-		uv.x = (fx / uFramesU)+ su * fx / uFramesU;
-		uv.y = (fy / uFramesV)+ sv * fy / uFramesV;
-		
-		gl_FragColor = texture2D(uTexture, uv);
-	}
+uniform sampler2D uTexture;
+uniform float uFrame;
+uniform float uFramesU;
+uniform float uFramesV
+varying vec2 vUv;
+void main(void)
+{
+	float fx = uFrame % uFramesU;
+	float fy = floor(uFrame / uFramesU);
+	
+	vec2 uv;
+	uv.x = (fx / uFramesU)+ su * fx / uFramesU;
+	uv.y = (fy / uFramesV)+ sv * fy / uFramesV;
+	
+	gl_FragColor = texture2D(uTexture, uv);
+}
 </script>
 
 <script src="script_3p/XMLHttpRequest.js" type="text/javascript"></script>
 <script src="script_3p/three.min.js" type="text/javascript"></script>
-<script src="script_sdk/THREEx.KeyboardState.js" type="text/javascript"></script>
-<script src="script_sdk/mouse.js" type="text/javascript"></script>
 
 <script src="script_sdk/util.js" type="text/javascript"></script>
 
 <script src="script_sdk/main.js" type="text/javascript"></script>
+<script src="script_sdk/THREEx.KeyboardState.js" type="text/javascript"></script>
+<script src="script_sdk/input.js" type="text/javascript"></script>
 <script src="script_sdk/geometry.js" type="text/javascript"></script>
 <script src="script_sdk/sound.js" type="text/javascript"></script>
 

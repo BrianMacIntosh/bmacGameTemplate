@@ -2,6 +2,8 @@
 
 bmacSdk =
 {
+	CFG_PAUSE_WHEN_UNFOCUSED: true,
+	
 	//Used to ignore large frame delta after focusin
 	_eatFrame: false,
 	
@@ -80,7 +82,6 @@ bmacSdk.Engine.prototype._attachDom = function()
 	this.renderer.setClearColor(0x000000, 1);
 	
 	//TODO: 2D depth management
-	//TODO: vectors
 	
 	//Input
 	this.keyboard = new THREEx.KeyboardState();
@@ -131,10 +132,10 @@ bmacSdk._animate = function()
 		return;
 	}
 	
-	/*if (!bmacSdk.isFocused)
+	if (bmacSdk.CFG_PAUSE_WHEN_UNFOCUSED && !bmacSdk.isFocused)
 	{
 		return;
-	}*/
+	}
 	
 	for (var c = 0; c < bmacSdk.engines.length; c++)
 		bmacSdk.engines[c]._animate();
