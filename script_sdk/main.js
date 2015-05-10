@@ -84,7 +84,7 @@ bmacSdk.Engine.prototype._attachDom = function()
 	//TODO: 2D depth management
 	
 	//Input
-	this.keyboard = new THREEx.KeyboardState();
+	this.keyboard = new bmacSdk.KeyboardState();
 	this.mouse = new bmacSdk.MouseState();
 	
 	this.scene = new THREE.Scene();
