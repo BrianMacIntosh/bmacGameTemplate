@@ -85,7 +85,7 @@ bmacSdk.Engine.prototype._attachDom = function()
 	
 	//Input
 	this.keyboard = new THREEx.KeyboardState();
-	this.mouse = new MOUSEMON(this.canvasDiv);
+	this.mouse = new bmacSdk.MouseState();
 	
 	this.scene = new THREE.Scene();
 	
@@ -101,8 +101,11 @@ bmacSdk.Engine.prototype._attachDom = function()
 
 bmacSdk.Engine.prototype._animate = function()
 {
+	this.keyboard.update();
+	this.mouse.update();
+	
 	//Calc mouse pos
-	this.mousePosWorld = new Vector2(MOUSEPOSREL(this.canvasDiv));
+	this.mousePosWorld = new Vector2(this.mouse.getPosition(this.canvasDiv));
 	this.mousePosWorld.x += this.mainCamera.position.x;
 	this.mousePosWorld.y += this.mainCamera.position.y;
 	
@@ -115,8 +118,6 @@ bmacSdk.Engine.prototype._animate = function()
 	
 	//Render
 	this.renderer.render(this.scene, this.mainCamera);
-	
-	this.mouse.resetMouseNew();
 };
 
 bmacSdk._animate = function()

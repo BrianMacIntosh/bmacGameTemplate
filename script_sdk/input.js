@@ -1,68 +1,137 @@
-//Position tracking
-var MOUSEPOS = { x: 0, y: 0 };
-var MOUSEPOSREL = function(element)
+
+bmacSdk.MouseState = function()
 {
-	//Find global position of element
-	var elemX = element.offsetLeft;
-	var elemY = element.offsetTop;
-	while (element = element.offsetParent)
+	this.mousePos = { x: 0, y: 0 };
+	
+	//stores current button state
+	this.mouseDown = {};
+	
+	//buffers button changes for one frame
+	//duplicated in order to remember the states into the next frame
+	this.mousePressed = {};
+	this.mouseReleased = {};
+	this.mousePressedBuffer = {};
+	this.mouseReleasedBuffer = {};
+	
+	//create callbacks
+	var self = this;
+	this._onMouseMove = function(e)
 	{
-		elemX += element.offsetLeft;
-		elemY += element.offsetTop;
+		e = e || window.event;
+		self.mousePos.x = e.pageX;
+		self.mousePos.y = e.pageY;
+	};
+	this._onDragOver = function(e)
+	{
+		e = e || window.event;
+		self.mousePos.x = e.pageX,
+		self.mousePos.y = e.pageY;
+	}
+	this._onMouseDown = function(e)
+	{
+		e = e || window.event;
+		self.mousePressedBuffer[e.which || e.keyCode] = true;
+	}
+	this._onMouseUp = function(e)
+	{
+		e = e || window.event;
+		self.mouseReleasedBuffer[e.which || e.keyCode] = true;
 	}
 	
-	var vec = {};
-	vec.x = MOUSEPOS.x - elemX;
-	vec.y = MOUSEPOS.y - elemY;
-	return vec;
-};
-document.onmousemove = function(e)
-{
-	e = e || window.event;
-	MOUSEPOS.x = e.pageX;
-	MOUSEPOS.y = e.pageY;
-};
-document.ondragover = function(e)
-{
-	e = e || window.event;
-	MOUSEPOS.x = e.pageX,
-	MOUSEPOS.y = e.pageY;
+	document.addEventListener("mousemove", this._onMouseMove, false);
+	document.addEventListener("dragover", this._onDragOver, false);
+	document.addEventListener("mousedown", this._onMouseDown, false);
+	document.addEventListener("mouseup", this._onMouseUp, false);
 }
 
-//Creatable object for tracking clicks on an element
-var MOUSEMON = function(elem)
+bmacSdk.MouseState.prototype.destroy = function()
 {
-	this.mouseUp = [0, 0, 0];
-	this.mouseDown = [0, 0, 0];
-	this.mouseUpNew = [0, 0, 0];
-	this.mouseDownNew = [0, 0, 0];
-	var thisup = this;
-	elem.onmousedown = function(e)
+	document.removeEventListener("mousemove", this._onMouseMove, false);
+	document.removeEventListener("dragover", this._onDragOver, false);
+	document.removeEventListener("mousedown", this._onMouseDown, false);
+	document.removeEventListener("mouseup", this._onMouseUp, false);
+}
+
+bmacSdk.MouseState.prototype.update = function()
+{
+	//cycle buffers
+	var temp = this.mousePressed;
+	this.mousePressed = this.mousePressedBuffer;
+	this.mousePressedBuffer = temp;
+	var temp = this.mouseReleased;
+	this.mouseReleased = this.mouseReleasedBuffer;
+	this.mouseReleasedBuffer = temp;
+	
+	//clear new buffer
+	for (var i in this.mousePressedBuffer)
 	{
-		var but = e.which || e.keyCode;
-		thisup.mouseDown[but] = 1;
-		thisup.mouseDownNew[but] = 1;
-		thisup.mouseUp[but] = 0;
+		this.mousePressedBuffer[i] = false;
 	}
-	document.onmouseup = function(e)
+	for (var i in this.mouseReleasedBuffer)
 	{
-		var but = e.which || e.keyCode;
-		thisup.mouseUp[but] = 1;
-		thisup.mouseUpNew[but] = 1;
-		thisup.mouseDown[but] = 0;
+		this.mouseReleasedBuffer[i] = false;
 	}
-	this.resetMouseNew = function()
+	
+	//update button down states
+	for (var i in this.mousePressed)
 	{
-		for (var i in this.mouseUpNew)
-		{
-			this.mouseUpNew[i] = 0;
-			this.mouseDownNew[i] = 0;
-		}
+		if (this.mousePressed[i] && !this.mouseReleased[i])
+			this.mouseDown[i] = true;
 	}
+	for (var i in this.mouseReleased)
+	{
+		if (this.mouseReleased[i] && !this.mousePressed[i])
+			this.mouseDown[i] = false;
+	}
+}
+
+bmacSdk.MouseState.prototype.getPosition = function(relativeTo)
+{
+	if (!relativeTo) return { x:this.mousePos.x,y:this.mousePos.y };
+	
+	//Find global position of element
+	var elemX = relativeTo.offsetLeft;
+	var elemY = relativeTo.offsetTop;
+	while (relativeTo = relativeTo.offsetParent)
+	{
+		elemX += relativeTo.offsetLeft;
+		elemY += relativeTo.offsetTop;
+	}
+	
+	//Calculate relative position of mouse
+	var vec = {};
+	vec.x = this.mousePos.x - elemX;
+	vec.y = this.mousePos.y - elemY;
+	return vec;
+};
+
+bmacSdk.MouseState.prototype.buttonPressed = function(button)
+{
+	return !!this.mousePressed[button];
+}
+
+bmacSdk.MouseState.prototype.buttonReleased = function(button)
+{
+	return !!this.mouseReleased[button];
+}
+
+bmacSdk.MouseState.prototype.buttonDown = function(button)
+{
+	return !!this.mouseDown[button];
+}
+
+bmacSdk.MouseState.prototype.buttonUp = function(button)
+{
+	return !this.mouseDown[button];
 }
 
 bmacSdk.INPUT = 
 {
+	MB_LEFT: 1,
+	MB_RIGHT: 2,
+	MB_MIDDLE: 3,
+	MB_OTHER: 4,
+	
 	STICK_THRESHOLD: 0.3,
 	DEAD_ZONE: 0.15,
 	
