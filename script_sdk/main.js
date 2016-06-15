@@ -86,6 +86,7 @@ bmacSdk.Engine.prototype._attachDom = function()
 	//Input
 	this.keyboard = new bmacSdk.KeyboardState();
 	this.mouse = new bmacSdk.MouseState();
+	this.mousePosWorld = new THREE.Vector2();
 	
 	this.scene = new THREE.Scene();
 	
@@ -105,7 +106,7 @@ bmacSdk.Engine.prototype._animate = function()
 	this.mouse.update();
 	
 	//Calc mouse pos
-	this.mousePosWorld = new Vector2(this.mouse.getPosition(this.canvasDiv));
+	this.mousePosWorld.copy(this.mouse.getPosition(this.canvasDiv));
 	this.mousePosWorld.x += this.mainCamera.position.x;
 	this.mousePosWorld.y += this.mainCamera.position.y;
 	
