@@ -1,26 +1,26 @@
 
 bmacSdk.MOUSE =
 {
-	LEFT:	1,
-	RIGHT:	2,
-	MIDDLE:	3,
-	OTHER:	4,
-}
-
-bmacSdk.MouseState = function()
-{
-	this.mousePos = { x: 0, y: 0 };
+	mousePos: { x: 0, y: 0 },
 	
 	//stores current button state
-	this.mouseDown = {};
+	mouseDown: {},
 	
 	//buffers button changes for one frame
 	//duplicated in order to remember the states into the next frame
-	this.mousePressed = {};
-	this.mouseReleased = {};
-	this.mousePressedBuffer = {};
-	this.mouseReleasedBuffer = {};
+	mousePressed: {},
+	mouseReleased: {},
+	mousePressedBuffer: {},
+	mouseReleasedBuffer: {},
 	
+	LEFT	: 1,
+	MIDDLE	: 2,
+	RIGHT	: 3,
+	OTHER	: 4,
+}
+
+bmacSdk.MOUSE.init = function()
+{
 	//create callbacks
 	var self = this;
 	this._onMouseMove = function(e)
@@ -52,7 +52,7 @@ bmacSdk.MouseState = function()
 	document.addEventListener("mouseup", this._onMouseUp, false);
 }
 
-bmacSdk.MouseState.prototype.destroy = function()
+bmacSdk.MOUSE.destroy = function()
 {
 	document.removeEventListener("mousemove", this._onMouseMove, false);
 	document.removeEventListener("dragover", this._onDragOver, false);
@@ -60,7 +60,7 @@ bmacSdk.MouseState.prototype.destroy = function()
 	document.removeEventListener("mouseup", this._onMouseUp, false);
 }
 
-bmacSdk.MouseState.prototype.update = function()
+bmacSdk.MOUSE.update = function()
 {
 	//cycle buffers
 	var temp = this.mousePressed;
@@ -93,7 +93,7 @@ bmacSdk.MouseState.prototype.update = function()
 	}
 }
 
-bmacSdk.MouseState.prototype.getPosition = function(relativeTo)
+bmacSdk.MOUSE.getPosition = function(relativeTo)
 {
 	if (!relativeTo) return { x:this.mousePos.x,y:this.mousePos.y };
 	
@@ -113,22 +113,22 @@ bmacSdk.MouseState.prototype.getPosition = function(relativeTo)
 	return vec;
 };
 
-bmacSdk.MouseState.prototype.buttonPressed = function(button)
+bmacSdk.MOUSE.buttonPressed = function(button)
 {
 	return !!this.mousePressed[button];
 }
 
-bmacSdk.MouseState.prototype.buttonReleased = function(button)
+bmacSdk.MOUSE.buttonReleased = function(button)
 {
 	return !!this.mouseReleased[button];
 }
 
-bmacSdk.MouseState.prototype.buttonDown = function(button)
+bmacSdk.MOUSE.buttonDown = function(button)
 {
 	return !!this.mouseDown[button];
 }
 
-bmacSdk.MouseState.prototype.buttonUp = function(button)
+bmacSdk.MOUSE.buttonUp = function(button)
 {
 	return !this.mouseDown[button];
 }

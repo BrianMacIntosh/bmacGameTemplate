@@ -9,7 +9,14 @@ bmacSdk =
 	
 	isFocused: true,
 	domAttached: false,
-	deltaSec: 0,
+	timeScale: 1,
+	
+	get deltaSec()
+	{
+		return this._deltaSec * this.timeScale;
+	},
+	_deltaSec: 0,
+	
 	engines: []
 };
 bmacSdk.Engine = function(canvasDiv)
@@ -28,12 +35,23 @@ window.onfocus = document.onfocusin = function()
 	bmacSdk.isFocused = true;
 	bmacSdk._eatFrame = true;
 };
+window.onresize = function()
+{
+	for (var c = 0; c < bmacSdk.engines.length; c++)
+	{
+		bmacSdk.engines[c]._handleWindowResize();
+	}
+}
 bmacSdk._attachDom = function()
 {
 	this.domAttached = true;
 	
+	bmacSdk.INPUT.init();
+	
 	for (var c = 0; c < bmacSdk.engines.length; c++)
+	{
 		bmacSdk.engines[c]._attachDom();
+	}
 	
 	this._lastFrame = Date.now();
 	this._animate();
@@ -70,8 +88,6 @@ bmacSdk.Engine.prototype.removeObject = function(object)
 
 bmacSdk.Engine.prototype._attachDom = function()
 {
-	this.whiteTexture = THREE.ImageUtils.loadTexture("media/white.png");
-	
 	this.canvasDiv = document.getElementById(this.canvasDivName);
 	this.renderer = new THREE.WebGLRenderer();
 	this.canvasDiv.appendChild(this.renderer.domElement);
@@ -83,15 +99,12 @@ bmacSdk.Engine.prototype._attachDom = function()
 	
 	//TODO: 2D depth management
 	
-	//Input
-	this.keyboard = new bmacSdk.KeyboardState();
-	this.mouse = new bmacSdk.MouseState();
-	this.mousePosWorld = new THREE.Vector2();
-	
 	this.scene = new THREE.Scene();
 	
-	this.mainCamera = new THREE.OrthographicCamera(0, this.screenWidth, 0, this.screenHeight, 1, 100);
+	this.mainCamera = new THREE.OrthographicCamera(0, 0, 0, 0, 1, 100);
 	this.mainCamera.position.set(0,0,0);
+	
+	this._handleWindowResize();
 	
 	for (var c = 0; c < this.objects.length; c++)
 	{
@@ -100,21 +113,33 @@ bmacSdk.Engine.prototype._attachDom = function()
 	}
 };
 
+bmacSdk.Engine.prototype._handleWindowResize = function()
+{
+	this.screenWidth = this.canvasDiv.offsetWidth;
+	this.screenHeight = this.canvasDiv.offsetHeight;
+	this.renderer.setSize(this.screenWidth, this.screenHeight);
+	this.mainCamera.left = -this.screenWidth/2;
+	this.mainCamera.right = this.screenWidth/2;
+	this.mainCamera.top = -this.screenHeight/2;
+	this.mainCamera.bottom = this.screenHeight/2;
+	this.mainCamera.updateProjectionMatrix();
+}
+
 bmacSdk.Engine.prototype._animate = function()
 {
-	this.keyboard.update();
-	this.mouse.update();
-	
 	//Calc mouse pos
-	this.mousePosWorld.copy(this.mouse.getPosition(this.canvasDiv));
-	this.mousePosWorld.x += this.mainCamera.position.x;
-	this.mousePosWorld.y += this.mainCamera.position.y;
+	var mousePos = bmacSdk.MOUSE.getPosition(this.canvasDiv);
+	if (!this.mousePosWorld) this.mousePosWorld = new THREE.Vector2();
+	this.mousePosWorld.x = mousePos.x + this.mainCamera.position.x;
+	this.mousePosWorld.y = mousePos.y + this.mainCamera.position.y;
 	
 	//Update objects
 	for (var c = 0; c < this.objects.length; c++)
 	{
 		if (this.objects[c].update)
-			this.objects[c].update();
+		{
+			this.objects[c].update(bmacSdk.deltaSec);
+		}
 	}
 	
 	//Render
@@ -139,6 +164,10 @@ bmacSdk._animate = function()
 		return;
 	}
 	
+	bmacSdk.INPUT.update();
+	
 	for (var c = 0; c < bmacSdk.engines.length; c++)
+	{
 		bmacSdk.engines[c]._animate();
+	}
 };

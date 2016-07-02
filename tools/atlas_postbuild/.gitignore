@@ -1,0 +1,7 @@
+.vs/
+*.pdb
+bin/Debug/
+*.vshost.exe
+*.vshost.exe.config
+*.vshost.exe.manifest
+*.vshost.exe.config.manifest

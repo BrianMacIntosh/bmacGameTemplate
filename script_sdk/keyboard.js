@@ -1,6 +1,15 @@
 
 bmacSdk.KEYBOARD =
 {
+	//stores current button state
+	keysDown: {},
+	
+	//buffers button changes for one frame
+	keysPressed: {},
+	keysReleased: {},
+	keysPressedBuffer: {},
+	keysReleasedBuffer: {},
+	
 	LEFT	: 37,
 	UP	: 38,
 	RIGHT	: 39,
@@ -8,28 +17,29 @@ bmacSdk.KEYBOARD =
 	SPACE	: 32,
 	PGUP	: 33,
 	PGDOWN	: 34,
-	TAB	: 9,
+	TAB	:  9,
 	ESCAPE	: 27,
 	ENTER	: 13,
+	SHIFT	: 16,
+	CTRL	: 17,
+	ALT	: 18,
 }
 
-bmacSdk.KeyboardState = function()
+bmacSdk.KEYBOARD.init = function()
 {
-	//stores current button state
-	this.keysDown = {};
-	
-	//buffers button changes for one frame
-	this.keysPressed = {};
-	this.keysReleased = {};
-	this.keysPressedBuffer = {};
-	this.keysReleasedBuffer = {};
-	
 	//create callbacks
 	var self = this;
 	this._onKeyDown = function(e)
 	{
 		e = e || window.event;
 		self.keysPressedBuffer[e.keyCode] = true;
+		
+		// prevent scrolling
+		if (e.keyCode == bmacSdk.KEYBOARD.SPACE)
+		{
+			e.preventDefault();
+			return false;
+		}
 	};
 	this._onKeyUp = function(e)
 	{
@@ -41,13 +51,13 @@ bmacSdk.KeyboardState = function()
 	document.addEventListener("keyup", this._onKeyUp, false);
 }
 
-bmacSdk.KeyboardState.prototype.destroy = function()
+bmacSdk.KEYBOARD.destroy = function()
 {
 	document.removeEventListener("keydown", this._onKeyDown, false);
 	document.removeEventListener("keyup", this._onKeyUp, false);
 }
 
-bmacSdk.KeyboardState.prototype.update = function()
+bmacSdk.KEYBOARD.update = function()
 {
 	//cycle buffers
 	var temp = this.keysPressed;
@@ -86,7 +96,7 @@ bmacSdk.KeyboardState.prototype.update = function()
 	}
 }
 
-bmacSdk.KeyboardState.prototype._translateKey = function(code)
+bmacSdk.KEYBOARD._translateKey = function(code)
 {
 	if (typeof code == 'string' || code instanceof String)
 		return code.toUpperCase().charCodeAt(0);
@@ -94,22 +104,22 @@ bmacSdk.KeyboardState.prototype._translateKey = function(code)
 		return code;
 }
 
-bmacSdk.KeyboardState.prototype.keyPressed = function(code)
+bmacSdk.KEYBOARD.keyPressed = function(code)
 {
 	return !!this.keysPressed[this._translateKey(code)];
 }
 
-bmacSdk.KeyboardState.prototype.keyReleased = function(code)
+bmacSdk.KEYBOARD.keyReleased = function(code)
 {
 	return !!this.keysReleased[this._translateKey(code)];
 }
 
-bmacSdk.KeyboardState.prototype.keyDown = function(code)
+bmacSdk.KEYBOARD.keyDown = function(code)
 {
 	return !!this.keysDown[this._translateKey(code)];
 }
 
-bmacSdk.KeyboardState.prototype.keyUp = function(code)
+bmacSdk.KEYBOARD.keyUp = function(code)
 {
 	return !this.keysDown[this._translateKey(code)];
 }

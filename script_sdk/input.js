@@ -30,49 +30,55 @@ bmacSdk.INPUT =
 	FIRST_PLAYER: 0, //TODO: dynamic
 };
 
+bmacSdk.INPUT.init = function()
+{
+	bmacSdk.KEYBOARD.init();
+	bmacSdk.MOUSE.init();
+}
+
 bmacSdk.INPUT.actionMenuLeft = function()
 {
-	return GameEngine.keyboard.keyPressed("left") || GameEngine.keyboard.keyPressed("a")
+	return GameEngine.keyboard.keyPressed(bmacSdk.KEYBOARD.LEFT) || GameEngine.keyboard.keyPressed("a")
 		|| this.gamepadAxisPressed(this.FIRST_PLAYER, this.GA_LEFTSTICK_X) < 0
 		|| this.gamepadButtonPressed(this.FIRST_PLAYER, this.GB_DPAD_LEFT);
 }
 
 bmacSdk.INPUT.actionMenuRight = function()
 {
-	return GameEngine.keyboard.keyPressed("right") || GameEngine.keyboard.keyPressed("d")
+	return GameEngine.keyboard.keyPressed(bmacSdk.KEYBOARD.RIGHT) || GameEngine.keyboard.keyPressed("d")
 		|| this.gamepadAxisPressed(this.FIRST_PLAYER, this.GA_LEFTSTICK_X) > 0
 		|| this.gamepadButtonPressed(this.FIRST_PLAYER, this.GB_DPAD_RIGHT);
 }
 
 bmacSdk.INPUT.actionMenuUp = function()
 {
-	return GameEngine.keyboard.keyPressed("up") || GameEngine.keyboard.keyPressed("w")
+	return GameEngine.keyboard.keyPressed(bmacSdk.KEYBOARD.UP) || GameEngine.keyboard.keyPressed("w")
 		|| this.gamepadAxisPressed(this.FIRST_PLAYER, this.GA_LEFTSTICK_Y) < 0
 		|| this.gamepadButtonPressed(this.FIRST_PLAYER, this.GB_DPAD_UP);
 }
 
 bmacSdk.INPUT.actionMenuDown = function()
 {
-	return GameEngine.keyboard.keyPressed("down") || GameEngine.keyboard.keyPressed("s")
+	return GameEngine.keyboard.keyPressed(bmacSdk.KEYBOARD.DOWN) || GameEngine.keyboard.keyPressed("s")
 		|| this.gamepadAxisPressed(this.FIRST_PLAYER, this.GA_LEFTSTICK_Y) > 0
 		|| this.gamepadButtonPressed(this.FIRST_PLAYER, this.GB_DPAD_DOWN);
 }
 
 bmacSdk.INPUT.actionMenuAccept = function()
 {
-	return GameEngine.keyboard.keyPressed("space") || GameEngine.keyboard.keyPressed("return")
+	return GameEngine.keyboard.keyPressed(bmacSdk.KEYBOARD.SPACE) || GameEngine.keyboard.keyPressed(bmacSdk.KEYBOARD.ENTER)
 		|| this.gamepadButtonPressed(this.FIRST_PLAYER, this.GB_A)
 		|| GameEngine.mouse.mouseUpNew[1];
 }
 
 bmacSdk.INPUT.actionMenuCancel = function()
 {
-	return GameEngine.keyboard.keyPressed("escape") || this.gamepadButtonPressed(this.FIRST_PLAYER, this.GB_B);
+	return GameEngine.keyboard.keyPressed(bmacSdk.KEYBOARD.ESCAPE) || this.gamepadButtonPressed(this.FIRST_PLAYER, this.GB_B);
 }
 
 bmacSdk.INPUT.actionGamePause = function()
 {
-	return GameEngine.keyboard.keyPressed("escape") || this.gamepadButtonPressed(this.FIRST_PLAYER, this.GB_START);
+	return GameEngine.keyboard.keyPressed(bmacSdk.KEYBOARD.ESCAPE) || this.gamepadButtonPressed(this.FIRST_PLAYER, this.GB_START);
 }
 
 bmacSdk.INPUT.getGamepad = function(gamepad)
@@ -226,4 +232,7 @@ bmacSdk.INPUT.update = function()
 		this.oldGamepads = undefined;
 		this.gamepads = undefined;
 	}
+	
+	bmacSdk.MOUSE.update();
+	bmacSdk.KEYBOARD.update();
 }
