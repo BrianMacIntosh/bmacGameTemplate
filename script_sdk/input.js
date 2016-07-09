@@ -236,3 +236,269 @@ bmacSdk.INPUT.update = function()
 	bmacSdk.MOUSE.update();
 	bmacSdk.KEYBOARD.update();
 }
+
+
+
+
+bmacSdk.MOUSE =
+{
+	mousePos: { x: 0, y: 0 },
+	
+	//stores current button state
+	mouseDown: {},
+	
+	//buffers button changes for one frame
+	//duplicated in order to remember the states into the next frame
+	mousePressed: {},
+	mouseReleased: {},
+	mousePressedBuffer: {},
+	mouseReleasedBuffer: {},
+	
+	LEFT	: 1,
+	MIDDLE	: 2,
+	RIGHT	: 3,
+	OTHER	: 4,
+}
+
+bmacSdk.MOUSE.init = function()
+{
+	//create callbacks
+	var self = this;
+	this._onMouseMove = function(e)
+	{
+		e = e || window.event;
+		self.mousePos.x = e.pageX;
+		self.mousePos.y = e.pageY;
+	};
+	this._onDragOver = function(e)
+	{
+		e = e || window.event;
+		self.mousePos.x = e.pageX,
+		self.mousePos.y = e.pageY;
+	}
+	this._onMouseDown = function(e)
+	{
+		e = e || window.event;
+		self.mousePressedBuffer[e.which || e.keyCode] = true;
+	}
+	this._onMouseUp = function(e)
+	{
+		e = e || window.event;
+		self.mouseReleasedBuffer[e.which || e.keyCode] = true;
+	}
+	
+	document.addEventListener("mousemove", this._onMouseMove, false);
+	document.addEventListener("dragover", this._onDragOver, false);
+	document.addEventListener("mousedown", this._onMouseDown, false);
+	document.addEventListener("mouseup", this._onMouseUp, false);
+}
+
+bmacSdk.MOUSE.destroy = function()
+{
+	document.removeEventListener("mousemove", this._onMouseMove, false);
+	document.removeEventListener("dragover", this._onDragOver, false);
+	document.removeEventListener("mousedown", this._onMouseDown, false);
+	document.removeEventListener("mouseup", this._onMouseUp, false);
+}
+
+bmacSdk.MOUSE.update = function()
+{
+	//cycle buffers
+	var temp = this.mousePressed;
+	this.mousePressed = this.mousePressedBuffer;
+	this.mousePressedBuffer = temp;
+	var temp = this.mouseReleased;
+	this.mouseReleased = this.mouseReleasedBuffer;
+	this.mouseReleasedBuffer = temp;
+	
+	//clear new buffer
+	for (var i in this.mousePressedBuffer)
+	{
+		this.mousePressedBuffer[i] = false;
+	}
+	for (var i in this.mouseReleasedBuffer)
+	{
+		this.mouseReleasedBuffer[i] = false;
+	}
+	
+	//update button down states
+	for (var i in this.mousePressed)
+	{
+		if (this.mousePressed[i] && !this.mouseReleased[i])
+			this.mouseDown[i] = true;
+	}
+	for (var i in this.mouseReleased)
+	{
+		if (this.mouseReleased[i] && !this.mousePressed[i])
+			this.mouseDown[i] = false;
+	}
+}
+
+bmacSdk.MOUSE.getPosition = function(relativeTo)
+{
+	if (!relativeTo) return { x:this.mousePos.x,y:this.mousePos.y };
+	
+	//Find global position of element
+	var elemX = relativeTo.offsetLeft;
+	var elemY = relativeTo.offsetTop;
+	while (relativeTo = relativeTo.offsetParent)
+	{
+		elemX += relativeTo.offsetLeft;
+		elemY += relativeTo.offsetTop;
+	}
+	
+	//Calculate relative position of mouse
+	var vec = {};
+	vec.x = this.mousePos.x - elemX;
+	vec.y = this.mousePos.y - elemY;
+	return vec;
+};
+
+bmacSdk.MOUSE.buttonPressed = function(button)
+{
+	return !!this.mousePressed[button];
+}
+
+bmacSdk.MOUSE.buttonReleased = function(button)
+{
+	return !!this.mouseReleased[button];
+}
+
+bmacSdk.MOUSE.buttonDown = function(button)
+{
+	return !!this.mouseDown[button];
+}
+
+bmacSdk.MOUSE.buttonUp = function(button)
+{
+	return !this.mouseDown[button];
+}
+
+
+
+
+
+bmacSdk.KEYBOARD =
+{
+	//stores current button state
+	keysDown: {},
+	
+	//buffers button changes for one frame
+	keysPressed: {},
+	keysReleased: {},
+	keysPressedBuffer: {},
+	keysReleasedBuffer: {},
+	
+	LEFT	: 37,
+	UP	: 38,
+	RIGHT	: 39,
+	DOWN	: 40,
+	SPACE	: 32,
+	PGUP	: 33,
+	PGDOWN	: 34,
+	TAB	:  9,
+	ESCAPE	: 27,
+	ENTER	: 13,
+	SHIFT	: 16,
+	CTRL	: 17,
+	ALT	: 18,
+}
+
+bmacSdk.KEYBOARD.init = function()
+{
+	//create callbacks
+	var self = this;
+	this._onKeyDown = function(e)
+	{
+		e = e || window.event;
+		self.keysPressedBuffer[e.keyCode] = true;
+		
+		// prevent scrolling
+		if (e.keyCode == bmacSdk.KEYBOARD.SPACE)
+		{
+			e.preventDefault();
+			return false;
+		}
+	};
+	this._onKeyUp = function(e)
+	{
+		e = e || window.event;
+		self.keysReleasedBuffer[e.keyCode] = true;
+	};
+	
+	document.addEventListener("keydown", this._onKeyDown, false);
+	document.addEventListener("keyup", this._onKeyUp, false);
+}
+
+bmacSdk.KEYBOARD.destroy = function()
+{
+	document.removeEventListener("keydown", this._onKeyDown, false);
+	document.removeEventListener("keyup", this._onKeyUp, false);
+}
+
+bmacSdk.KEYBOARD.update = function()
+{
+	//cycle buffers
+	var temp = this.keysPressed;
+	this.keysPressed = this.keysPressedBuffer;
+	this.keysPressedBuffer = temp;
+	var temp = this.keysReleased;
+	this.keysReleased = this.keysReleasedBuffer;
+	this.keysReleasedBuffer = temp;
+	
+	//clear new buffer
+	for (var i in this.keysPressedBuffer)
+	{
+		this.keysPressedBuffer[i] = false;
+	}
+	for (var i in this.mouseReleasedBuffer)
+	{
+		this.keysReleasedBuffer[i] = false;
+	}
+	
+	//update button down states
+	for (var i in this.keysPressed)
+	{
+		//ignore repeats
+		if (this.keysDown[i])
+			this.keysPressed[i] = false;
+		else if (this.keysPressed[i] && !this.keysReleased[i])
+			this.keysDown[i] = true;
+	}
+	for (var i in this.keysReleased)
+	{
+		//ignore repeats
+		if (!this.keysDown[i])
+			this.keysReleased[i] = false;
+		else if (this.keysReleased[i] && !this.keysPressed[i])
+			this.keysDown[i] = false;
+	}
+}
+
+bmacSdk.KEYBOARD._translateKey = function(code)
+{
+	if (typeof code == 'string' || code instanceof String)
+		return code.toUpperCase().charCodeAt(0);
+	else
+		return code;
+}
+
+bmacSdk.KEYBOARD.keyPressed = function(code)
+{
+	return !!this.keysPressed[this._translateKey(code)];
+}
+
+bmacSdk.KEYBOARD.keyReleased = function(code)
+{
+	return !!this.keysReleased[this._translateKey(code)];
+}
+
+bmacSdk.KEYBOARD.keyDown = function(code)
+{
+	return !!this.keysDown[this._translateKey(code)];
+}
+
+bmacSdk.KEYBOARD.keyUp = function(code)
+{
+	return !this.keysDown[this._translateKey(code)];
+}
