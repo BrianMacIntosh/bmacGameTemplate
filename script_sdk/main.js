@@ -148,7 +148,7 @@ bmacSdk.Engine.prototype._animate = function()
 
 bmacSdk._animate = function()
 {
-	bmacSdk.deltaSec = (Date.now() - bmacSdk._lastFrame) / 1000;
+	bmacSdk._deltaSec = (Date.now() - bmacSdk._lastFrame) / 1000;
 	bmacSdk._lastFrame = Date.now();
 	
 	requestAnimationFrame(bmacSdk._animate);
