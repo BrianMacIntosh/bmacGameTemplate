@@ -1,0 +1,1 @@
+cmd /K bin\build_debug.bat

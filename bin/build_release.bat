@@ -1,0 +1,1 @@
+browserify index.js > index.temp.js & minify index.temp.js > index.bundle.js & del index.temp.js

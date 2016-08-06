@@ -1,0 +1,1 @@
+browserify index.js > index.bundle.js
