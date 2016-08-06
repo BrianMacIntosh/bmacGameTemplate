@@ -1,13 +1,13 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 
-bmacSdk = require("./src/sdk/engine/index.js");
+bmacSdk = require("./src/sdk/engine");
 bmacSdk.initialize();
 
 GameEngine = new bmacSdk.Engine("canvasDiv");
 
 GameEngine.addObject(require("./src/game/sample.js"));
 
-},{"./src/game/sample.js":3,"./src/sdk/engine/index.js":4}],2:[function(require,module,exports){
+},{"./src/game/sample.js":3,"./src/sdk/engine":4}],2:[function(require,module,exports){
 // File:src/Three.js
 
 /**
@@ -41772,7 +41772,7 @@ THREE.MorphBlendMesh.prototype.update = function ( delta ) {
 
 },{}],3:[function(require,module,exports){
 
-ThreeUtils = require("../sdk/threeutils/index.js");
+ThreeUtils = require("../sdk/threeutils");
 
 module.exports = sampleGame =
 {
@@ -41799,10 +41799,10 @@ sampleGame.update = function()
 	
 };
 
-},{"../sdk/threeutils/index.js":8}],4:[function(require,module,exports){
+},{"../sdk/threeutils":8}],4:[function(require,module,exports){
 
-require("../utils/index.js");
-Input = require("../input/index.js");
+require("../utils");
+Input = require("../input");
 THREE = require("three");
 
 module.exports = bmacSdk =
@@ -41980,7 +41980,7 @@ bmacSdk._animate = function()
 	}
 };
 
-},{"../input/index.js":5,"../utils/index.js":9,"three":2}],5:[function(require,module,exports){
+},{"../input":5,"../utils":9,"three":2}],5:[function(require,module,exports){
 
 module.exports = Input = 
 {

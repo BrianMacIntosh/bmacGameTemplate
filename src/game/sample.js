@@ -1,5 +1,5 @@
 
-ThreeUtils = require("../sdk/threeutils/index.js");
+ThreeUtils = require("../sdk/threeutils");
 
 module.exports = sampleGame =
 {

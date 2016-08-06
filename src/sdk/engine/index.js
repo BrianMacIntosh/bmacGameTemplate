@@ -1,6 +1,6 @@
 
-require("../utils/index.js");
-Input = require("../input/index.js");
+require("../utils");
+Input = require("../input");
 THREE = require("three");
 
 module.exports = bmacSdk =
