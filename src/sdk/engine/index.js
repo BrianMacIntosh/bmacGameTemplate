@@ -1,40 +1,62 @@
 
-require("../utils");
-Input = require("../input");
 THREE = require("three");
 
+require("../polyfills");
+Input = require("../input");
+
+/**
+ * @namespace
+ */
 module.exports = bmacSdk =
 {
+	/**
+	 * If set, the game will not update if the window doesn't have focus.
+	 * @type {Boolean}
+	 */
 	CFG_PAUSE_WHEN_UNFOCUSED: false,
 	
-	//Used to ignore large frame delta after focusin
+	/**
+	 * Used to ignore large frame delta after focusin
+	 * @type {Boolean}
+	 */
 	_eatFrame: false,
 	
+	/**
+	 * Set to true if the window has focus.
+	 * @type {Boolean}
+	 */
 	isFocused: true,
+
 	domAttached: false,
+
+	/**
+	 * Multiplier to apply to the delta time. Higher values make the game move faster.
+	 * @type {Number}
+	 */
 	timeScale: 1,
 	
+	/**
+	 * Gets the elapsed time since the last frame (in seconds).
+	 * @type {Number}
+	 */
 	get deltaSec()
 	{
 		return this._deltaSec * this.timeScale;
 	},
 	_deltaSec: 0,
 	
+	/**
+	 * List of all active Engines.
+	 * @type {Array}
+	 */
 	engines: [],
+
+	Engine: require("./engine.js"),
 };
 
-bmacSdk.Engine = function(canvasDivName)
-{
-	bmacSdk.engines.push(this);
-	this.objects = [];
-	this.canvasDivName = canvasDivName;
-
-	this.scene = new THREE.Scene();
-	
-	this.mainCamera = new THREE.OrthographicCamera(0, 0, 0, 0, 1, 100);
-	this.mainCamera.position.set(0,0,0);
-};
-
+/**
+ * Call this once to initialize the SDK.
+ */
 bmacSdk.initialize = function()
 {
 	window.onblur = document.onfocusout = function()
@@ -58,6 +80,9 @@ bmacSdk.initialize = function()
 	});
 }
 
+/**
+ * Call this from onload of the body element. Initializes all engines.
+ */
 bmacSdk._attachDom = function()
 {
 	this.domAttached = true;
@@ -67,91 +92,27 @@ bmacSdk._attachDom = function()
 		bmacSdk.engines[c]._attachDom();
 	}
 	
-	Input.init();
+	Input._init();
 	
 	this._lastFrame = Date.now();
 	this._animate();
 };
 
-/*
-Object System:
-Objects get these methods called if they have them:
-
-void added();
-- Called when the object is added to the scene
-void removed();
-- Called when the object is removed from the scene
-void update();
-- Called once per frame
-*/
-
-bmacSdk.Engine.prototype.addObject = function(object)
+/**
+ * Shut down the SDK.
+ */
+bmacSdk.destroy = function()
 {
-	if (this.objects.contains(object))
-		return object;
-	if (object.added && bmacSdk.domAttached)
-		object.added();
-	this.objects.push(object);
-	return object;
-};
+	Input._destroy();
 
-bmacSdk.Engine.prototype.removeObject = function(object)
-{
-	if (object.removed)
-		object.removed();
-	this.objects.remove(object);
-};
+	//TODO: destroy all engines
 
-bmacSdk.Engine.prototype._attachDom = function()
-{
-	this.canvasDiv = document.getElementById(this.canvasDivName);
-	this.renderer = new THREE.WebGLRenderer();
-	this.canvasDiv.appendChild(this.renderer.domElement);
-	this.canvasDiv.oncontextmenu = function() { return false; };
-	this.renderer.setClearColor(0x000000, 1);
-	
-	//TODO: 2D depth management
-	
-	this._handleWindowResize();
-	
-	for (var c = 0; c < this.objects.length; c++)
-	{
-		if (this.objects[c].added)
-			this.objects[c].added();
-	}
-};
-
-bmacSdk.Engine.prototype._handleWindowResize = function()
-{
-	this.screenWidth = this.canvasDiv.offsetWidth;
-	this.screenHeight = this.canvasDiv.offsetHeight;
-	this.renderer.setSize(this.screenWidth, this.screenHeight);
-	this.mainCamera.left = -this.screenWidth/2;
-	this.mainCamera.right = this.screenWidth/2;
-	this.mainCamera.top = -this.screenHeight/2;
-	this.mainCamera.bottom = this.screenHeight/2;
-	this.mainCamera.updateProjectionMatrix();
+	//TODO: stop the animate loop
 }
 
-bmacSdk.Engine.prototype._animate = function()
-{
-	//Calc mouse pos
-	var mousePos = Input.Mouse.getPosition(this.canvasDiv);
-	if (!this.mousePosWorld) this.mousePosWorld = new THREE.Vector2();
-	this.mousePosWorld.x = mousePos.x + this.mainCamera.position.x;
-	this.mousePosWorld.y = mousePos.y + this.mainCamera.position.y;
-	
-	//Update objects
-	for (var c = 0; c < this.objects.length; c++)
-	{
-		if (this.objects[c].update)
-			this.objects[c].update(bmacSdk.deltaSec);
-	}
-	
-	//Render
-	this.renderer.render(this.scene, this.mainCamera);
-};
-
+/**
+ * Main update loop.
+ */
 bmacSdk._animate = function()
 {
 	bmacSdk._deltaSec = (Date.now() - bmacSdk._lastFrame) / 1000;
@@ -170,7 +131,7 @@ bmacSdk._animate = function()
 		return;
 	}
 	
-	Input.update();
+	Input._update();
 	
 	for (var c = 0; c < bmacSdk.engines.length; c++)
 	{

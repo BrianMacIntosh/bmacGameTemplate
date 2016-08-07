@@ -9,117 +9,146 @@ module.exports = Keyboard =
 	keysReleased: {},
 	keysPressedBuffer: {},
 	keysReleasedBuffer: {},
-}
 
-Keyboard.LEFT	= 37;
-Keyboard.UP	= 38;
-Keyboard.RIGHT	= 39;
-Keyboard.DOWN	= 40;
-Keyboard.SPACE	= 32;
-Keyboard.PGUP	= 33;
-Keyboard.PGDOWN	= 34;
-Keyboard.TAB	=  9;
-Keyboard.ESCAPE	= 27;
-Keyboard.ENTER	= 13;
-Keyboard.SHIFT	= 16;
-Keyboard.CTRL	= 17;
-Keyboard.ALT	= 18;
+	LEFT	: 37,
+	UP		: 38,
+	RIGHT	: 39,
+	DOWN	: 40,
+	SPACE	: 32,
+	PGUP	: 33,
+	PGDOWN	: 34,
+	TAB		:  9,
+	ESCAPE	: 27,
+	ENTER	: 13,
+	SHIFT	: 16,
+	CTRL	: 17,
+	ALT		: 18,
 
-Keyboard.init = function()
-{
-	//create callbacks
-	var self = this;
-	this._onKeyDown = function(e)
+	/**
+	 * Called by the SDK to initialize keyboard listening.
+	 */
+	_init: function()
 	{
-		e = e || window.event;
-		self.keysPressedBuffer[e.keyCode] = true;
-		
-		// prevent scrolling
-		if (e.keyCode == Keyboard.SPACE)
+		//create callbacks
+		var self = this;
+		this._onKeyDown = function(e)
 		{
-			e.preventDefault();
-			return false;
+			e = e || window.event;
+			self.keysPressedBuffer[e.keyCode] = true;
+			
+			// prevent scrolling
+			if (e.keyCode == Keyboard.SPACE)
+			{
+				e.preventDefault();
+				return false;
+			}
+		};
+		this._onKeyUp = function(e)
+		{
+			e = e || window.event;
+			self.keysReleasedBuffer[e.keyCode] = true;
+		};
+		
+		document.addEventListener("keydown", this._onKeyDown, false);
+		document.addEventListener("keyup", this._onKeyUp, false);
+	},
+
+	/**
+	 * Called by the SDK to stop keyboard listening.
+	 */
+	_destroy: function()
+	{
+		document.removeEventListener("keydown", this._onKeyDown, false);
+		document.removeEventListener("keyup", this._onKeyUp, false);
+	},
+
+	/**
+	 * Called each frame by the SDK.
+	 */
+	_update: function()
+	{
+		//cycle buffers
+		var temp = this.keysPressed;
+		this.keysPressed = this.keysPressedBuffer;
+		this.keysPressedBuffer = temp;
+		var temp = this.keysReleased;
+		this.keysReleased = this.keysReleasedBuffer;
+		this.keysReleasedBuffer = temp;
+		
+		//clear new buffer
+		for (var i in this.keysPressedBuffer)
+		{
+			this.keysPressedBuffer[i] = false;
 		}
-	};
-	this._onKeyUp = function(e)
+		for (var i in this.mouseReleasedBuffer)
+		{
+			this.keysReleasedBuffer[i] = false;
+		}
+		
+		//update button down states
+		for (var i in this.keysPressed)
+		{
+			//ignore repeats
+			if (this.keysDown[i])
+				this.keysPressed[i] = false;
+			else if (this.keysPressed[i] && !this.keysReleased[i])
+				this.keysDown[i] = true;
+		}
+		for (var i in this.keysReleased)
+		{
+			//ignore repeats
+			if (!this.keysDown[i])
+				this.keysReleased[i] = false;
+			else if (this.keysReleased[i] && !this.keysPressed[i])
+				this.keysDown[i] = false;
+		}
+	},
+
+	_translateKey: function(code)
 	{
-		e = e || window.event;
-		self.keysReleasedBuffer[e.keyCode] = true;
-	};
-	
-	document.addEventListener("keydown", this._onKeyDown, false);
-	document.addEventListener("keyup", this._onKeyUp, false);
-}
+		if (typeof code == 'string' || code instanceof String)
+			return code.toUpperCase().charCodeAt(0);
+		else
+			return code;
+	},
 
-Keyboard.destroy = function()
-{
-	document.removeEventListener("keydown", this._onKeyDown, false);
-	document.removeEventListener("keyup", this._onKeyUp, false);
-}
-
-Keyboard.update = function()
-{
-	//cycle buffers
-	var temp = this.keysPressed;
-	this.keysPressed = this.keysPressedBuffer;
-	this.keysPressedBuffer = temp;
-	var temp = this.keysReleased;
-	this.keysReleased = this.keysReleasedBuffer;
-	this.keysReleasedBuffer = temp;
-	
-	//clear new buffer
-	for (var i in this.keysPressedBuffer)
+	/**
+	 * Returns true on the first frame the specified key is pressed.
+	 * @param {any} code A character or a key scancode (see constant definitions).
+	 * @returns {Boolean}
+	 */
+	keyPressed: function(code)
 	{
-		this.keysPressedBuffer[i] = false;
-	}
-	for (var i in this.mouseReleasedBuffer)
+		return !!this.keysPressed[this._translateKey(code)];
+	},
+
+	/**
+	 * Returns true on the first frame the specified key is released.
+	 * @param {any} code A character or a key scancode (see constant definitions).
+	 * @returns {Boolean}
+	 */
+	keyReleased: function(code)
 	{
-		this.keysReleasedBuffer[i] = false;
-	}
-	
-	//update button down states
-	for (var i in this.keysPressed)
+		return !!this.keysReleased[this._translateKey(code)];
+	},
+
+	/**
+	 * Returns true if the specified key is down.
+	 * @param {any} code A character or a key scancode (see constant definitions).
+	 * @returns {Boolean}
+	 */
+	keyDown: function(code)
 	{
-		//ignore repeats
-		if (this.keysDown[i])
-			this.keysPressed[i] = false;
-		else if (this.keysPressed[i] && !this.keysReleased[i])
-			this.keysDown[i] = true;
-	}
-	for (var i in this.keysReleased)
+		return !!this.keysDown[this._translateKey(code)];
+	},
+
+	/**
+	 * Returns true if the specified key is not down.
+	 * @param {any} code A character or a key scancode (see constant definitions).
+	 * @returns {Boolean}
+	 */
+	keyUp: function(code)
 	{
-		//ignore repeats
-		if (!this.keysDown[i])
-			this.keysReleased[i] = false;
-		else if (this.keysReleased[i] && !this.keysPressed[i])
-			this.keysDown[i] = false;
-	}
-}
-
-Keyboard._translateKey = function(code)
-{
-	if (typeof code == 'string' || code instanceof String)
-		return code.toUpperCase().charCodeAt(0);
-	else
-		return code;
-}
-
-Keyboard.keyPressed = function(code)
-{
-	return !!this.keysPressed[this._translateKey(code)];
-}
-
-Keyboard.keyReleased = function(code)
-{
-	return !!this.keysReleased[this._translateKey(code)];
-}
-
-Keyboard.keyDown = function(code)
-{
-	return !!this.keysDown[this._translateKey(code)];
-}
-
-Keyboard.keyUp = function(code)
-{
-	return !this.keysDown[this._translateKey(code)];
-}
+		return !this.keysDown[this._translateKey(code)];
+	},
+};

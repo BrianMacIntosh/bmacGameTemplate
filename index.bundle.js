@@ -7,7 +7,7 @@ GameEngine = new bmacSdk.Engine("canvasDiv");
 
 GameEngine.addObject(require("./src/game/sample.js"));
 
-},{"./src/game/sample.js":3,"./src/sdk/engine":4}],2:[function(require,module,exports){
+},{"./src/game/sample.js":3,"./src/sdk/engine":5}],2:[function(require,module,exports){
 // File:src/Three.js
 
 /**
@@ -41781,12 +41781,12 @@ module.exports = sampleGame =
 
 sampleGame.added = function()
 {
-	this.dirtTexture = ThreeUtils.textureLoader.load("media/dirt.png");
+	this.dirtTexture = ThreeUtils.loadTexture("media/dirt.png");
 	this.dirtGeo = ThreeUtils.makeSpriteGeo(128, 64);
 	
-	var m = ThreeUtils.makeSpriteMesh(this.dirtTexture, this.dirtGeo);
-	m.position.set(200, 200, -10);
-	GameEngine.scene.add(m);
+	this.mesh = ThreeUtils.makeSpriteMesh(this.dirtTexture, this.dirtGeo);
+	this.mesh.position.set(200, 200, -10);
+	GameEngine.scene.add(this.mesh);
 };
 
 sampleGame.removed = function()
@@ -41796,36 +41796,19 @@ sampleGame.removed = function()
 
 sampleGame.update = function()
 {
-	
+	// move the mesh 5 pixels per second
+	this.mesh.position.x -= 5 * bmacSdk.deltaSec;
 };
 
-},{"../sdk/threeutils":8}],4:[function(require,module,exports){
+},{"../sdk/threeutils":11}],4:[function(require,module,exports){
 
-require("../utils");
-Input = require("../input");
-THREE = require("three");
+bmacSdk = require("./index.js");
 
-module.exports = bmacSdk =
-{
-	CFG_PAUSE_WHEN_UNFOCUSED: false,
-	
-	//Used to ignore large frame delta after focusin
-	_eatFrame: false,
-	
-	isFocused: true,
-	domAttached: false,
-	timeScale: 1,
-	
-	get deltaSec()
-	{
-		return this._deltaSec * this.timeScale;
-	},
-	_deltaSec: 0,
-	
-	engines: [],
-};
-
-bmacSdk.Engine = function(canvasDivName)
+/**
+ * An Engine has a scene and a camera and manages game objects that are added to it.
+ * @param {String} canvasDivName The name of the HTML element the canvas should be added to.
+ */
+var Engine = function(canvasDivName)
 {
 	bmacSdk.engines.push(this);
 	this.objects = [];
@@ -41837,6 +41820,152 @@ bmacSdk.Engine = function(canvasDivName)
 	this.mainCamera.position.set(0,0,0);
 };
 
+/**
+ * Adds an object to the engine.
+ * If the object has an 'added' method, it will be called now or when the DOM is attached.
+ * If the object has an 'update' method, it will be called every frame until the object is removed.
+ * @param {Object} object
+ */
+Engine.prototype.addObject = function(object)
+{
+	if (this.objects.contains(object))
+		return object;
+	if (object.added && bmacSdk.domAttached)
+		object.added();
+	this.objects.push(object);
+	return object;
+};
+
+/**
+ * Removes an object from the engine.
+ * If the object has a 'removed' method, it will be called.
+ * @param {Object} object
+ */
+Engine.prototype.removeObject = function(object)
+{
+	if (object.removed)
+		object.removed();
+	this.objects.remove(object);
+};
+
+/**
+ * Initializes the engine.
+ */
+Engine.prototype._attachDom = function()
+{
+	this.canvasDiv = document.getElementById(this.canvasDivName);
+	this.renderer = new THREE.WebGLRenderer();
+	this.canvasDiv.appendChild(this.renderer.domElement);
+	this.canvasDiv.oncontextmenu = function() { return false; };
+	this.renderer.setClearColor(0x000000, 1);
+	
+	//TODO: 2D depth management
+	
+	this._handleWindowResize();
+	
+	for (var c = 0; c < this.objects.length; c++)
+	{
+		if (this.objects[c].added)
+			this.objects[c].added();
+	}
+};
+
+/**
+ * Resizes the renderer to match the size of the window.
+ */
+Engine.prototype._handleWindowResize = function()
+{
+	this.screenWidth = this.canvasDiv.offsetWidth;
+	this.screenHeight = this.canvasDiv.offsetHeight;
+	this.renderer.setSize(this.screenWidth, this.screenHeight);
+	this.mainCamera.left = -this.screenWidth/2;
+	this.mainCamera.right = this.screenWidth/2;
+	this.mainCamera.top = -this.screenHeight/2;
+	this.mainCamera.bottom = this.screenHeight/2;
+	this.mainCamera.updateProjectionMatrix();
+}
+
+Engine.prototype._animate = function()
+{
+	// calculate mouse pos
+	var mousePos = Input.Mouse.getPosition(this.canvasDiv);
+	if (!this.mousePosWorld) this.mousePosWorld = new THREE.Vector2();
+	this.mousePosWorld.x = mousePos.x + this.mainCamera.position.x;
+	this.mousePosWorld.y = mousePos.y + this.mainCamera.position.y;
+	
+	// update objects
+	for (var c = 0; c < this.objects.length; c++)
+	{
+		if (this.objects[c].update)
+			this.objects[c].update(bmacSdk.deltaSec);
+	}
+	
+	// render
+	this.renderer.render(this.scene, this.mainCamera);
+};
+
+module.exports = Engine;
+
+},{"./index.js":5}],5:[function(require,module,exports){
+
+THREE = require("three");
+
+require("../polyfills");
+Input = require("../input");
+
+/**
+ * @namespace
+ */
+module.exports = bmacSdk =
+{
+	/**
+	 * If set, the game will not update if the window doesn't have focus.
+	 * @type {Boolean}
+	 */
+	CFG_PAUSE_WHEN_UNFOCUSED: false,
+	
+	/**
+	 * Used to ignore large frame delta after focusin
+	 * @type {Boolean}
+	 */
+	_eatFrame: false,
+	
+	/**
+	 * Set to true if the window has focus.
+	 * @type {Boolean}
+	 */
+	isFocused: true,
+
+	domAttached: false,
+
+	/**
+	 * Multiplier to apply to the delta time. Higher values make the game move faster.
+	 * @type {Number}
+	 */
+	timeScale: 1,
+	
+	/**
+	 * Gets the elapsed time since the last frame (in seconds).
+	 * @type {Number}
+	 */
+	get deltaSec()
+	{
+		return this._deltaSec * this.timeScale;
+	},
+	_deltaSec: 0,
+	
+	/**
+	 * List of all active Engines.
+	 * @type {Array}
+	 */
+	engines: [],
+
+	Engine: require("./engine.js"),
+};
+
+/**
+ * Call this once to initialize the SDK.
+ */
 bmacSdk.initialize = function()
 {
 	window.onblur = document.onfocusout = function()
@@ -41860,6 +41989,9 @@ bmacSdk.initialize = function()
 	});
 }
 
+/**
+ * Call this from onload of the body element. Initializes all engines.
+ */
 bmacSdk._attachDom = function()
 {
 	this.domAttached = true;
@@ -41869,91 +42001,27 @@ bmacSdk._attachDom = function()
 		bmacSdk.engines[c]._attachDom();
 	}
 	
-	Input.init();
+	Input._init();
 	
 	this._lastFrame = Date.now();
 	this._animate();
 };
 
-/*
-Object System:
-Objects get these methods called if they have them:
-
-void added();
-- Called when the object is added to the scene
-void removed();
-- Called when the object is removed from the scene
-void update();
-- Called once per frame
-*/
-
-bmacSdk.Engine.prototype.addObject = function(object)
+/**
+ * Shut down the SDK.
+ */
+bmacSdk.destroy = function()
 {
-	if (this.objects.contains(object))
-		return object;
-	if (object.added && bmacSdk.domAttached)
-		object.added();
-	this.objects.push(object);
-	return object;
-};
+	Input._destroy();
 
-bmacSdk.Engine.prototype.removeObject = function(object)
-{
-	if (object.removed)
-		object.removed();
-	this.objects.remove(object);
-};
+	//TODO: destroy all engines
 
-bmacSdk.Engine.prototype._attachDom = function()
-{
-	this.canvasDiv = document.getElementById(this.canvasDivName);
-	this.renderer = new THREE.WebGLRenderer();
-	this.canvasDiv.appendChild(this.renderer.domElement);
-	this.canvasDiv.oncontextmenu = function() { return false; };
-	this.renderer.setClearColor(0x000000, 1);
-	
-	//TODO: 2D depth management
-	
-	this._handleWindowResize();
-	
-	for (var c = 0; c < this.objects.length; c++)
-	{
-		if (this.objects[c].added)
-			this.objects[c].added();
-	}
-};
-
-bmacSdk.Engine.prototype._handleWindowResize = function()
-{
-	this.screenWidth = this.canvasDiv.offsetWidth;
-	this.screenHeight = this.canvasDiv.offsetHeight;
-	this.renderer.setSize(this.screenWidth, this.screenHeight);
-	this.mainCamera.left = -this.screenWidth/2;
-	this.mainCamera.right = this.screenWidth/2;
-	this.mainCamera.top = -this.screenHeight/2;
-	this.mainCamera.bottom = this.screenHeight/2;
-	this.mainCamera.updateProjectionMatrix();
+	//TODO: stop the animate loop
 }
 
-bmacSdk.Engine.prototype._animate = function()
-{
-	//Calc mouse pos
-	var mousePos = Input.Mouse.getPosition(this.canvasDiv);
-	if (!this.mousePosWorld) this.mousePosWorld = new THREE.Vector2();
-	this.mousePosWorld.x = mousePos.x + this.mainCamera.position.x;
-	this.mousePosWorld.y = mousePos.y + this.mainCamera.position.y;
-	
-	//Update objects
-	for (var c = 0; c < this.objects.length; c++)
-	{
-		if (this.objects[c].update)
-			this.objects[c].update(bmacSdk.deltaSec);
-	}
-	
-	//Render
-	this.renderer.render(this.scene, this.mainCamera);
-};
-
+/**
+ * Main update loop.
+ */
 bmacSdk._animate = function()
 {
 	bmacSdk._deltaSec = (Date.now() - bmacSdk._lastFrame) / 1000;
@@ -41972,7 +42040,7 @@ bmacSdk._animate = function()
 		return;
 	}
 	
-	Input.update();
+	Input._update();
 	
 	for (var c = 0; c < bmacSdk.engines.length; c++)
 	{
@@ -41980,7 +42048,7 @@ bmacSdk._animate = function()
 	}
 };
 
-},{"../input":5,"../utils":9,"three":2}],5:[function(require,module,exports){
+},{"../input":6,"../polyfills":9,"./engine.js":4,"three":2}],6:[function(require,module,exports){
 
 module.exports = Input = 
 {
@@ -42011,217 +42079,310 @@ module.exports = Input =
 	GA_RIGHTSTICK_Y: 3,
 	
 	FIRST_PLAYER: 0, //TODO: dynamic
-};
 
-Input.Keyboard = require("./keyboard.js");
-Input.Mouse = require("./mouse.js");
+	Keyboard: require("./keyboard.js"),
+	Mouse: require("./mouse.js"),
 
-Input.init = function()
-{
-	this.Keyboard.init();
-	this.Mouse.init();
-}
-
-Input.actionMenuLeft = function()
-{
-	return this.Keyboard.keyPressed(this.Keyboard.LEFT) || this.Keyboard.keyPressed("a")
-		|| this.gamepadAxisPressed(this.FIRST_PLAYER, this.GA_LEFTSTICK_X) < 0
-		|| this.gamepadButtonPressed(this.FIRST_PLAYER, this.GB_DPAD_LEFT);
-}
-
-Input.actionMenuRight = function()
-{
-	return this.Keyboard.keyPressed(this.Keyboard.RIGHT) || this.Keyboard.keyPressed("d")
-		|| this.gamepadAxisPressed(this.FIRST_PLAYER, this.GA_LEFTSTICK_X) > 0
-		|| this.gamepadButtonPressed(this.FIRST_PLAYER, this.GB_DPAD_RIGHT);
-}
-
-Input.actionMenuUp = function()
-{
-	return this.Keyboard.keyPressed(this.Keyboard.UP) || this.Keyboard.keyPressed("w")
-		|| this.gamepadAxisPressed(this.FIRST_PLAYER, this.GA_LEFTSTICK_Y) < 0
-		|| this.gamepadButtonPressed(this.FIRST_PLAYER, this.GB_DPAD_UP);
-}
-
-Input.actionMenuDown = function()
-{
-	return this.Keyboard.keyPressed(this.Keyboard.DOWN) || this.Keyboard.keyPressed("s")
-		|| this.gamepadAxisPressed(this.FIRST_PLAYER, this.GA_LEFTSTICK_Y) > 0
-		|| this.gamepadButtonPressed(this.FIRST_PLAYER, this.GB_DPAD_DOWN);
-}
-
-Input.actionMenuAccept = function()
-{
-	return this.Keyboard.keyPressed(this.Keyboard.SPACE) || this.Keyboard.keyPressed(this.Keyboard.ENTER)
-		|| this.gamepadButtonPressed(this.FIRST_PLAYER, this.GB_A);
-}
-
-Input.actionMenuCancel = function()
-{
-	return this.Keyboard.keyPressed(this.Keyboard.ESCAPE) || this.gamepadButtonPressed(this.FIRST_PLAYER, this.GB_B);
-}
-
-Input.actionGamePause = function()
-{
-	return this.Keyboard.keyPressed(this.Keyboard.ESCAPE) || this.gamepadButtonPressed(this.FIRST_PLAYER, this.GB_START);
-}
-
-Input.getGamepad = function(gamepad)
-{
-	if (this.gamepads && this.gamepads[gamepad])
-		return this.gamepads[gamepad];
-	else
-		return null;
-};
-
-Input.gamepadExists = function(gamepad)
-{
-	if (this.gamepads && this.gamepads[gamepad])
-		return true;
-	else
-		return false;
-};
-
-Input.gamepadConnected = function(gamepad)
-{
-	if (this.gamepads && this.gamepads[gamepad] && this.gamepads[gamepad].connected)
-		return true;
-	else
-		return false;
-};
-
-Input.gamepadButtonPressed = function(gamepad, button)
-{
-	return this.gamepadButtonDown(gamepad, button) && !this.gamepadButtonDownOld(gamepad, button);
-};
-
-Input.gamepadButtonReleased = function(gamepad, button)
-{
-	return this.gamepadButtonUp(gamepad, button) && !this.gamepadButtonUpOld(gamepad, button);
-};
-
-Input.gamepadButtonUp = function(gamepad, button)
-{
-	if (this.gamepads && this.gamepads[gamepad] && this.gamepads[gamepad].buttons.length > button)
-		return !this.gamepads[gamepad].buttons[button].pressed;
-	else
-		return false;
-};
-
-Input.gamepadButtonDown = function(gamepad, button)
-{
-	if (this.gamepads && this.gamepads[gamepad] && this.gamepads[gamepad].buttons.length > button)
-		return this.gamepads[gamepad].buttons[button].pressed;
-	else
-		return false;
-};
-
-Input.gamepadButtonUpOld = function(gamepad, button)
-{
-	if (this.oldGamepads && this.oldGamepads[gamepad] && this.oldGamepads[gamepad].buttons.length > button)
-		return !this.oldGamepads[gamepad].buttons[button].pressed;
-	else
-		return false;
-};
-
-Input.gamepadButtonDownOld = function(gamepad, button)
-{
-	if (this.oldGamepads && this.oldGamepads[gamepad] && this.oldGamepads[gamepad].buttons.length > button)
-		return this.oldGamepads[gamepad].buttons[button].pressed;
-	else
-		return false;
-};
-
-Input.gamepadButtonValue = function(gamepad, button)
-{
-	if (this.gamepads && this.gamepads[gamepad] && this.gamepads[gamepad].buttons.length > button)
-		return this.gamepads[gamepad].buttons[button].value;
-	else
-		return 0;
-};
-
-Input.gamepadAxis = function(gamepad, axis)
-{
-	if (this.gamepads && this.gamepads[gamepad] && this.gamepads[gamepad].axes.length > axis)
+	/**
+	 * Called by the SDK to initialize the input system.
+	 */
+	_init: function()
 	{
-		var val = this.gamepads[gamepad].axes[axis];
-		if (Math.abs(val) <= this.DEAD_ZONE) val = 0;
-		return val;
-	}
-	else
-		return 0;
-};
+		this.Keyboard._init();
+		this.Mouse._init();
+	},
 
-Input.gamepadOldAxis = function(gamepad, axis)
-{
-	if (this.oldGamepads && this.oldGamepads[gamepad] && this.oldGamepads[gamepad].axes.length > axis)
+	/**
+	 * Called by the SDK to destroy the input system.
+	 */
+	_destroy: function()
 	{
-		var val = this.oldGamepads[gamepad].axes[axis];
-		if (Math.abs(val) <= this.DEAD_ZONE) val = 0;
-		return val;
-	}
-	else
-		return 0;
-};
+		this.Keyboard._destroy();
+		this.Mouse._destroy();
+	},
 
-Input.gamepadAxisPressed = function(gamepad, axis)
-{
-	if (this.gamepadOldAxis(gamepad, axis) < this.STICK_THRESHOLD && this.gamepadAxis(gamepad, axis) >= this.STICK_THRESHOLD)
-		return 1;
-	else if (this.gamepadOldAxis(gamepad, axis) > -this.STICK_THRESHOLD && this.gamepadAxis(gamepad, axis) <= -this.STICK_THRESHOLD)
-		return -1;
-	else
-		return 0;
-};
-
-Input.cloneGamepadState = function(source)
-{
-	if (!source) return null;
-	
-	var target = [];
-	target.length = source.length;
-	for (var i = 0; i < source.length; i++)
+	/**
+	 * Returns true if a 'left' control was pressed.
+	 * @returns {Boolean}
+	 */
+	actionMenuLeft: function()
 	{
-		if (source[i])
+		return this.Keyboard.keyPressed(this.Keyboard.LEFT) || this.Keyboard.keyPressed("a")
+			|| this.gamepadAxisPressed(this.FIRST_PLAYER, this.GA_LEFTSTICK_X) < 0
+			|| this.gamepadButtonPressed(this.FIRST_PLAYER, this.GB_DPAD_LEFT);
+	},
+
+	/**
+	 * Returns true if a 'right' control was pressed.
+	 * @returns {Boolean}
+	 */
+	actionMenuRight: function()
+	{
+		return this.Keyboard.keyPressed(this.Keyboard.RIGHT) || this.Keyboard.keyPressed("d")
+			|| this.gamepadAxisPressed(this.FIRST_PLAYER, this.GA_LEFTSTICK_X) > 0
+			|| this.gamepadButtonPressed(this.FIRST_PLAYER, this.GB_DPAD_RIGHT);
+	},
+
+	/**
+	 * Returns true if an 'up' control was pressed.
+	 * @returns {Boolean}
+	 */
+	actionMenuUp: function()
+	{
+		return this.Keyboard.keyPressed(this.Keyboard.UP) || this.Keyboard.keyPressed("w")
+			|| this.gamepadAxisPressed(this.FIRST_PLAYER, this.GA_LEFTSTICK_Y) < 0
+			|| this.gamepadButtonPressed(this.FIRST_PLAYER, this.GB_DPAD_UP);
+	},
+
+	/**
+	 * Returns true if a 'down' control was pressed.
+	 * @returns {Boolean}
+	 */
+	actionMenuDown: function()
+	{
+		return this.Keyboard.keyPressed(this.Keyboard.DOWN) || this.Keyboard.keyPressed("s")
+			|| this.gamepadAxisPressed(this.FIRST_PLAYER, this.GA_LEFTSTICK_Y) > 0
+			|| this.gamepadButtonPressed(this.FIRST_PLAYER, this.GB_DPAD_DOWN);
+	},
+
+	/**
+	 * Returns true if an 'accept' control was pressed.
+	 * @returns {Boolean}
+	 */
+	actionMenuAccept: function()
+	{
+		return this.Keyboard.keyPressed(this.Keyboard.SPACE) || this.Keyboard.keyPressed(this.Keyboard.ENTER)
+			|| this.gamepadButtonPressed(this.FIRST_PLAYER, this.GB_A);
+	},
+
+	/**
+	 * Returns true if a 'cancel' control was pressed.
+	 * @returns {Boolean}
+	 */
+	actionMenuCancel: function()
+	{
+		return this.Keyboard.keyPressed(this.Keyboard.ESCAPE) || this.gamepadButtonPressed(this.FIRST_PLAYER, this.GB_B);
+	},
+
+	/**
+	 * Returns true if a 'pause' control was pressed.
+	 * @returns {Boolean}
+	 */
+	actionGamePause: function()
+	{
+		return this.Keyboard.keyPressed(this.Keyboard.ESCAPE) || this.gamepadButtonPressed(this.FIRST_PLAYER, this.GB_START);
+	},
+
+	/**
+	 * Gets raw information for the gamepad at the specified index.
+	 * @param {Number} index Gamepad index.
+	 */
+	getGamepad: function(index)
+	{
+		if (this.gamepads && this.gamepads[index])
+			return this.gamepads[index];
+		else
+			return null;
+	},
+
+	/**
+	 * Returns true if there is a gamepad at the specified index.
+	 * @param {Number} index Gamepad index.
+	 * @returns {Boolean}
+	 */
+	gamepadExists: function(index)
+	{
+		if (this.gamepads && this.gamepads[index])
+			return true;
+		else
+			return false;
+	},
+
+	/**
+	 * Returns true if there is a connected gamepad at the specified index.
+	 * @param {Number} index Gamepad index.
+	 * @returns {Boolean}
+	 */
+	gamepadConnected: function(index)
+	{
+		if (this.gamepads && this.gamepads[index] && this.gamepads[index].connected)
+			return true;
+		else
+			return false;
+	},
+
+	/**
+	 * Returns true on the frame the specified gamepad presses the specified button.
+	 * @param {Number} index Gamepad index.
+	 * @param {Number} button See constant definitions.
+	 */
+	gamepadButtonPressed: function(index, button)
+	{
+		return this.gamepadButtonDown(index, button) && !this._gamepadButtonDownOld(index, button);
+	},
+
+	/**
+	 * Returns true on the frame the specified gamepad releases the specified button.
+	 * @param {Number} index Gamepad index.
+	 * @param {Number} button See constant definitions.
+	 */
+	gamepadButtonReleased: function(index, button)
+	{
+		return this.gamepadButtonUp(index, button) && !this._gamepadButtonUpOld(index, button);
+	},
+
+	/**
+	 * Returns true if the specified button on the specified gamepad is not down.
+	 * @param {Number} index Gamepad index.
+	 * @param {Number} button See constant definitions.
+	 */
+	gamepadButtonUp: function(index, button)
+	{
+		if (this.gamepads && this.gamepads[index] && this.gamepads[index].buttons.length > button)
+			return !this.gamepads[index].buttons[button].pressed;
+		else
+			return false;
+	},
+
+	/**
+	 * Returns true if the specified button on the specified gamepad is down.
+	 * @param {Number} index Gamepad index.
+	 * @param {Number} button See constant definitions.
+	 */
+	gamepadButtonDown: function(index, button)
+	{
+		if (this.gamepads && this.gamepads[index] && this.gamepads[index].buttons.length > button)
+			return this.gamepads[index].buttons[button].pressed;
+		else
+			return false;
+	},
+
+	_gamepadButtonUpOld: function(index, button)
+	{
+		if (this.oldGamepads && this.oldGamepads[index] && this.oldGamepads[index].buttons.length > button)
+			return !this.oldGamepads[index].buttons[button].pressed;
+		else
+			return false;
+	},
+
+	_gamepadButtonDownOld: function(index, button)
+	{
+		if (this.oldGamepads && this.oldGamepads[index] && this.oldGamepads[index].buttons.length > button)
+			return this.oldGamepads[index].buttons[button].pressed;
+		else
+			return false;
+	},
+
+	/**
+	 * Returns the raw value of the specified gamepad button.
+	 * @param {Number} index Gamepad index.
+	 * @param {Number} button See constant definitions.
+	 */
+	gamepadButtonValue: function(index, button)
+	{
+		if (this.gamepads && this.gamepads[index] && this.gamepads[index].buttons.length > button)
+			return this.gamepads[index].buttons[button].value;
+		else
+			return 0;
+	},
+
+	/**
+	 * Returns the value of the specified gamepad axis.
+	 * @param {Number} index Gamepad index.
+	 * @param {Number} axisIndex See constant definitions.
+	 */
+	gamepadAxis: function(index, axisIndex)
+	{
+		if (this.gamepads && this.gamepads[index] && this.gamepads[index].axes.length > axisIndex)
 		{
-			var gamepad = source[i];
-			var state = {};
-			state.buttons = [];
-			state.buttons.length = gamepad.buttons.length;
-			state.axes = gamepad.axes.splice(0);
-			for (var b = 0; b < gamepad.buttons.length; b++)
+			var val = this.gamepads[index].axes[axisIndex];
+			if (Math.abs(val) <= this.DEAD_ZONE) val = 0;
+			return val;
+		}
+		else
+			return 0;
+	},
+
+	_gamepadOldAxis: function(index, axisIndex)
+	{
+		if (this.oldGamepads && this.oldGamepads[index] && this.oldGamepads[index].axes.length > axisIndex)
+		{
+			var val = this.oldGamepads[index].axes[axisIndex];
+			if (Math.abs(val) <= this.DEAD_ZONE) val = 0;
+			return val;
+		}
+		else
+			return 0;
+	},
+
+	/**
+	 * Returns 1 or -1 on the first frame the specified axis is pressed in that direction, or 0 if it isn't pressed.
+	 * @param {Number} index Gamepad index.
+	 * @param {Number} axisIndex See constant definitions.
+	 */
+	gamepadAxisPressed: function(index, axisIndex)
+	{
+		if (this._gamepadOldAxis(index, axisIndex) < this.STICK_THRESHOLD && this.gamepadAxis(index, axisIndex) >= this.STICK_THRESHOLD)
+			return 1;
+		else if (this._gamepadOldAxis(index, axisIndex) > -this.STICK_THRESHOLD && this.gamepadAxis(index, axisIndex) <= -this.STICK_THRESHOLD)
+			return -1;
+		else
+			return 0;
+	},
+
+	_cloneGamepadState: function(source)
+	{
+		if (!source) return null;
+		
+		var target = [];
+		target.length = source.length;
+		for (var i = 0; i < source.length; i++)
+		{
+			if (source[i])
 			{
-				var obj = {pressed:gamepad.buttons[b].pressed, value:gamepad.buttons[b].value};
-				state.buttons[b] = obj;
+				var gamepad = source[i];
+				var state = {};
+				state.buttons = [];
+				state.buttons.length = gamepad.buttons.length;
+				state.axes = gamepad.axes.splice(0);
+				for (var b = 0; b < gamepad.buttons.length; b++)
+				{
+					var obj = {pressed:gamepad.buttons[b].pressed, value:gamepad.buttons[b].value};
+					state.buttons[b] = obj;
+				}
+				target[i] = state;
 			}
-			target[i] = state;
+			else
+			{
+				target[i] = null;
+			}
+		}
+		return target;
+	},
+
+	/**
+	 * Called by the SDK each frame.
+	 */
+	_update: function()
+	{
+		if (navigator && navigator.getGamepads)
+		{
+			//HACK: so much garbage
+			this.oldGamepads = this._cloneGamepadState(this.gamepads);
+			this.gamepads = this._cloneGamepadState(navigator.getGamepads());
 		}
 		else
 		{
-			target[i] = null;
+			this.oldGamepads = undefined;
+			this.gamepads = undefined;
 		}
-	}
-	return target;
-}
+		
+		this.Keyboard._update();
+		this.Mouse._update();
+	},
+};
 
-Input.update = function()
-{
-	if (navigator && navigator.getGamepads)
-	{
-		//TODO: so much garbage
-		this.oldGamepads = this.cloneGamepadState(this.gamepads);
-		this.gamepads = this.cloneGamepadState(navigator.getGamepads());
-	}
-	else
-	{
-		this.oldGamepads = undefined;
-		this.gamepads = undefined;
-	}
-	
-	this.Keyboard.update();
-	this.Mouse.update();
-}
-},{"./keyboard.js":6,"./mouse.js":7}],6:[function(require,module,exports){
+},{"./keyboard.js":7,"./mouse.js":8}],7:[function(require,module,exports){
 
 module.exports = Keyboard =
 {
@@ -42233,122 +42394,151 @@ module.exports = Keyboard =
 	keysReleased: {},
 	keysPressedBuffer: {},
 	keysReleasedBuffer: {},
-}
 
-Keyboard.LEFT	= 37;
-Keyboard.UP	= 38;
-Keyboard.RIGHT	= 39;
-Keyboard.DOWN	= 40;
-Keyboard.SPACE	= 32;
-Keyboard.PGUP	= 33;
-Keyboard.PGDOWN	= 34;
-Keyboard.TAB	=  9;
-Keyboard.ESCAPE	= 27;
-Keyboard.ENTER	= 13;
-Keyboard.SHIFT	= 16;
-Keyboard.CTRL	= 17;
-Keyboard.ALT	= 18;
+	LEFT	: 37,
+	UP		: 38,
+	RIGHT	: 39,
+	DOWN	: 40,
+	SPACE	: 32,
+	PGUP	: 33,
+	PGDOWN	: 34,
+	TAB		:  9,
+	ESCAPE	: 27,
+	ENTER	: 13,
+	SHIFT	: 16,
+	CTRL	: 17,
+	ALT		: 18,
 
-Keyboard.init = function()
-{
-	//create callbacks
-	var self = this;
-	this._onKeyDown = function(e)
+	/**
+	 * Called by the SDK to initialize keyboard listening.
+	 */
+	_init: function()
 	{
-		e = e || window.event;
-		self.keysPressedBuffer[e.keyCode] = true;
-		
-		// prevent scrolling
-		if (e.keyCode == Keyboard.SPACE)
+		//create callbacks
+		var self = this;
+		this._onKeyDown = function(e)
 		{
-			e.preventDefault();
-			return false;
+			e = e || window.event;
+			self.keysPressedBuffer[e.keyCode] = true;
+			
+			// prevent scrolling
+			if (e.keyCode == Keyboard.SPACE)
+			{
+				e.preventDefault();
+				return false;
+			}
+		};
+		this._onKeyUp = function(e)
+		{
+			e = e || window.event;
+			self.keysReleasedBuffer[e.keyCode] = true;
+		};
+		
+		document.addEventListener("keydown", this._onKeyDown, false);
+		document.addEventListener("keyup", this._onKeyUp, false);
+	},
+
+	/**
+	 * Called by the SDK to stop keyboard listening.
+	 */
+	_destroy: function()
+	{
+		document.removeEventListener("keydown", this._onKeyDown, false);
+		document.removeEventListener("keyup", this._onKeyUp, false);
+	},
+
+	/**
+	 * Called each frame by the SDK.
+	 */
+	_update: function()
+	{
+		//cycle buffers
+		var temp = this.keysPressed;
+		this.keysPressed = this.keysPressedBuffer;
+		this.keysPressedBuffer = temp;
+		var temp = this.keysReleased;
+		this.keysReleased = this.keysReleasedBuffer;
+		this.keysReleasedBuffer = temp;
+		
+		//clear new buffer
+		for (var i in this.keysPressedBuffer)
+		{
+			this.keysPressedBuffer[i] = false;
 		}
-	};
-	this._onKeyUp = function(e)
+		for (var i in this.mouseReleasedBuffer)
+		{
+			this.keysReleasedBuffer[i] = false;
+		}
+		
+		//update button down states
+		for (var i in this.keysPressed)
+		{
+			//ignore repeats
+			if (this.keysDown[i])
+				this.keysPressed[i] = false;
+			else if (this.keysPressed[i] && !this.keysReleased[i])
+				this.keysDown[i] = true;
+		}
+		for (var i in this.keysReleased)
+		{
+			//ignore repeats
+			if (!this.keysDown[i])
+				this.keysReleased[i] = false;
+			else if (this.keysReleased[i] && !this.keysPressed[i])
+				this.keysDown[i] = false;
+		}
+	},
+
+	_translateKey: function(code)
 	{
-		e = e || window.event;
-		self.keysReleasedBuffer[e.keyCode] = true;
-	};
-	
-	document.addEventListener("keydown", this._onKeyDown, false);
-	document.addEventListener("keyup", this._onKeyUp, false);
-}
+		if (typeof code == 'string' || code instanceof String)
+			return code.toUpperCase().charCodeAt(0);
+		else
+			return code;
+	},
 
-Keyboard.destroy = function()
-{
-	document.removeEventListener("keydown", this._onKeyDown, false);
-	document.removeEventListener("keyup", this._onKeyUp, false);
-}
-
-Keyboard.update = function()
-{
-	//cycle buffers
-	var temp = this.keysPressed;
-	this.keysPressed = this.keysPressedBuffer;
-	this.keysPressedBuffer = temp;
-	var temp = this.keysReleased;
-	this.keysReleased = this.keysReleasedBuffer;
-	this.keysReleasedBuffer = temp;
-	
-	//clear new buffer
-	for (var i in this.keysPressedBuffer)
+	/**
+	 * Returns true on the first frame the specified key is pressed.
+	 * @param {any} code A character or a key scancode (see constant definitions).
+	 * @returns {Boolean}
+	 */
+	keyPressed: function(code)
 	{
-		this.keysPressedBuffer[i] = false;
-	}
-	for (var i in this.mouseReleasedBuffer)
+		return !!this.keysPressed[this._translateKey(code)];
+	},
+
+	/**
+	 * Returns true on the first frame the specified key is released.
+	 * @param {any} code A character or a key scancode (see constant definitions).
+	 * @returns {Boolean}
+	 */
+	keyReleased: function(code)
 	{
-		this.keysReleasedBuffer[i] = false;
-	}
-	
-	//update button down states
-	for (var i in this.keysPressed)
+		return !!this.keysReleased[this._translateKey(code)];
+	},
+
+	/**
+	 * Returns true if the specified key is down.
+	 * @param {any} code A character or a key scancode (see constant definitions).
+	 * @returns {Boolean}
+	 */
+	keyDown: function(code)
 	{
-		//ignore repeats
-		if (this.keysDown[i])
-			this.keysPressed[i] = false;
-		else if (this.keysPressed[i] && !this.keysReleased[i])
-			this.keysDown[i] = true;
-	}
-	for (var i in this.keysReleased)
+		return !!this.keysDown[this._translateKey(code)];
+	},
+
+	/**
+	 * Returns true if the specified key is not down.
+	 * @param {any} code A character or a key scancode (see constant definitions).
+	 * @returns {Boolean}
+	 */
+	keyUp: function(code)
 	{
-		//ignore repeats
-		if (!this.keysDown[i])
-			this.keysReleased[i] = false;
-		else if (this.keysReleased[i] && !this.keysPressed[i])
-			this.keysDown[i] = false;
-	}
-}
+		return !this.keysDown[this._translateKey(code)];
+	},
+};
 
-Keyboard._translateKey = function(code)
-{
-	if (typeof code == 'string' || code instanceof String)
-		return code.toUpperCase().charCodeAt(0);
-	else
-		return code;
-}
-
-Keyboard.keyPressed = function(code)
-{
-	return !!this.keysPressed[this._translateKey(code)];
-}
-
-Keyboard.keyReleased = function(code)
-{
-	return !!this.keysReleased[this._translateKey(code)];
-}
-
-Keyboard.keyDown = function(code)
-{
-	return !!this.keysDown[this._translateKey(code)];
-}
-
-Keyboard.keyUp = function(code)
-{
-	return !this.keysDown[this._translateKey(code)];
-}
-
-},{}],7:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 
 module.exports = Mouse =
 {
@@ -42363,425 +42553,162 @@ module.exports = Mouse =
 	mouseReleased: {},
 	mousePressedBuffer: {},
 	mouseReleasedBuffer: {},
-}
 
-Mouse.LEFT	= 1;
-Mouse.MIDDLE	= 2;
-Mouse.RIGHT	= 3;
-Mouse.OTHER	= 4;
+	LEFT	: 1,
+	MIDDLE	: 2,
+	RIGHT	: 3,
+	OTHER	: 4,
 
-Mouse.init = function()
-{
-	//create callbacks
-	var self = this;
-	this._onMouseMove = function(e)
+	/**
+	 * Called by the SDK to start listening to the mouse.
+	 */
+	_init: function()
 	{
-		e = e || window.event;
-		self.mousePos.x = e.pageX;
-		self.mousePos.y = e.pageY;
-	};
-	this._onDragOver = function(e)
-	{
-		e = e || window.event;
-		self.mousePos.x = e.pageX,
-		self.mousePos.y = e.pageY;
-	}
-	this._onMouseDown = function(e)
-	{
-		e = e || window.event;
-		self.mousePressedBuffer[e.which || e.keyCode] = true;
-	}
-	this._onMouseUp = function(e)
-	{
-		e = e || window.event;
-		self.mouseReleasedBuffer[e.which || e.keyCode] = true;
-	}
-	
-	document.addEventListener("mousemove", this._onMouseMove, false);
-	document.addEventListener("dragover", this._onDragOver, false);
-	document.addEventListener("mousedown", this._onMouseDown, false);
-	document.addEventListener("mouseup", this._onMouseUp, false);
-}
+		//create callbacks
+		var self = this;
+		this._onMouseMove = function(e)
+		{
+			e = e || window.event;
+			self.mousePos.x = e.pageX;
+			self.mousePos.y = e.pageY;
+		};
+		this._onDragOver = function(e)
+		{
+			e = e || window.event;
+			self.mousePos.x = e.pageX,
+			self.mousePos.y = e.pageY;
+		}
+		this._onMouseDown = function(e)
+		{
+			e = e || window.event;
+			self.mousePressedBuffer[e.which || e.keyCode] = true;
+		}
+		this._onMouseUp = function(e)
+		{
+			e = e || window.event;
+			self.mouseReleasedBuffer[e.which || e.keyCode] = true;
+		}
+		
+		document.addEventListener("mousemove", this._onMouseMove, false);
+		document.addEventListener("dragover", this._onDragOver, false);
+		document.addEventListener("mousedown", this._onMouseDown, false);
+		document.addEventListener("mouseup", this._onMouseUp, false);
+	},
 
-Mouse.destroy = function()
-{
-	document.removeEventListener("mousemove", this._onMouseMove, false);
-	document.removeEventListener("dragover", this._onDragOver, false);
-	document.removeEventListener("mousedown", this._onMouseDown, false);
-	document.removeEventListener("mouseup", this._onMouseUp, false);
-}
+	/**
+	 * Called by the SDK to stop mouse listening.
+	 */
+	_destroy: function()
+	{
+		document.removeEventListener("mousemove", this._onMouseMove, false);
+		document.removeEventListener("dragover", this._onDragOver, false);
+		document.removeEventListener("mousedown", this._onMouseDown, false);
+		document.removeEventListener("mouseup", this._onMouseUp, false);
+	},
 
-Mouse.update = function()
-{
-	//cycle buffers
-	var temp = this.mousePressed;
-	this.mousePressed = this.mousePressedBuffer;
-	this.mousePressedBuffer = temp;
-	var temp = this.mouseReleased;
-	this.mouseReleased = this.mouseReleasedBuffer;
-	this.mouseReleasedBuffer = temp;
-	
-	//clear new buffer
-	for (var i in this.mousePressedBuffer)
+	/**
+	 * Called by the SDK each frame to update the input state.
+	 */
+	_update: function()
 	{
-		this.mousePressedBuffer[i] = false;
-	}
-	for (var i in this.mouseReleasedBuffer)
-	{
-		this.mouseReleasedBuffer[i] = false;
-	}
-	
-	//update button down states
-	for (var i in this.mousePressed)
-	{
-		if (this.mousePressed[i] && !this.mouseReleased[i])
-			this.mouseDown[i] = true;
-	}
-	for (var i in this.mouseReleased)
-	{
-		if (this.mouseReleased[i] && !this.mousePressed[i])
-			this.mouseDown[i] = false;
-	}
-}
+		//cycle buffers
+		var temp = this.mousePressed;
+		this.mousePressed = this.mousePressedBuffer;
+		this.mousePressedBuffer = temp;
+		var temp = this.mouseReleased;
+		this.mouseReleased = this.mouseReleasedBuffer;
+		this.mouseReleasedBuffer = temp;
+		
+		//clear new buffer
+		for (var i in this.mousePressedBuffer)
+		{
+			this.mousePressedBuffer[i] = false;
+		}
+		for (var i in this.mouseReleasedBuffer)
+		{
+			this.mouseReleasedBuffer[i] = false;
+		}
+		
+		//update button down states
+		for (var i in this.mousePressed)
+		{
+			if (this.mousePressed[i] && !this.mouseReleased[i])
+				this.mouseDown[i] = true;
+		}
+		for (var i in this.mouseReleased)
+		{
+			if (this.mouseReleased[i] && !this.mousePressed[i])
+				this.mouseDown[i] = false;
+		}
+	},
 
-Mouse.getPosition = function(relativeTo)
-{
-	if (!relativeTo) return { x:this.mousePos.x,y:this.mousePos.y };
-	
-	//Find global position of element
-	var elemX = relativeTo.offsetLeft;
-	var elemY = relativeTo.offsetTop;
-	while (relativeTo = relativeTo.offsetParent)
+	/**
+	 * Returns the current position of the mouse relative to the specified HTML element.
+	 * @param {Element} relativeTo
+	 * @returns {Object}
+	 */
+	getPosition: function(relativeTo)
 	{
-		elemX += relativeTo.offsetLeft;
-		elemY += relativeTo.offsetTop;
-	}
-	
-	//Calculate relative position of mouse
-	var vec = {};
-	vec.x = this.mousePos.x - elemX;
-	vec.y = this.mousePos.y - elemY;
-	return vec;
+		if (!relativeTo) return { x:this.mousePos.x,y:this.mousePos.y };
+		
+		//Find global position of element
+		var elemX = relativeTo.offsetLeft;
+		var elemY = relativeTo.offsetTop;
+		while (relativeTo = relativeTo.offsetParent)
+		{
+			elemX += relativeTo.offsetLeft;
+			elemY += relativeTo.offsetTop;
+		}
+		
+		//Calculate relative position of mouse
+		var vec = {};
+		vec.x = this.mousePos.x - elemX;
+		vec.y = this.mousePos.y - elemY;
+		return vec;
+	},
+
+	/**
+	 * Returns true on the first frame the specified mouse button is pressed.
+	 * @param {Number} button See constant definitions.
+	 * @returns {Boolean}
+	 */
+	buttonPressed: function(button)
+	{
+		return !!this.mousePressed[button];
+	},
+
+	/**
+	 * Returns true on the first frame the specified mouse button is released.
+	 * @param {Number} button See constant definitions.
+	 * @returns {Boolean}
+	 */
+	buttonReleased: function(button)
+	{
+		return !!this.mouseReleased[button];
+	},
+
+	/**
+	 * Returns true if the specified mouse button is down.
+	 * @param {Number} button See constant definitions.
+	 * @returns {Boolean}
+	 */
+	buttonDown: function(button)
+	{
+		return !!this.mouseDown[button];
+	},
+
+	/**
+	 * Returns true if the specified mouse button is not down.
+	 * @param {Number} button See constant definitions.
+	 * @returns {Boolean}
+	 */
+	buttonUp: function(button)
+	{
+		return !this.mouseDown[button];
+	},
 };
 
-Mouse.buttonPressed = function(button)
-{
-	return !!this.mousePressed[button];
-}
-
-Mouse.buttonReleased = function(button)
-{
-	return !!this.mouseReleased[button];
-}
-
-Mouse.buttonDown = function(button)
-{
-	return !!this.mouseDown[button];
-}
-
-Mouse.buttonUp = function(button)
-{
-	return !this.mouseDown[button];
-}
-
-},{}],8:[function(require,module,exports){
-
-THREE = require("three");
-
-module.exports = ThreeUtils = 
-{
-	c_planeCorrection: new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(Math.PI, 0, 0)),
-	
-	textureLoader: new THREE.TextureLoader(),
-
-	// if set, all calls return dummy objects instead of real visual objects
-	serverMode: false,
-};
-
-THREE.Vector2.ZeroVector = new THREE.Vector2();
-
-THREE.Vector3.ZeroVector = new THREE.Vector3();
-THREE.Vector3.ForwardVector = new THREE.Vector3(0, 0, 1);
-THREE.Vector3.BackVector = new THREE.Vector3(0, 0, -1);
-THREE.Vector3.LeftVector = new THREE.Vector3(-1, 0, 0);
-THREE.Vector3.RightVector = new THREE.Vector3(1, 0, 0);
-THREE.Vector3.UpVector = new THREE.Vector3(0, -1, 0);
-THREE.Vector3.DownVector = new THREE.Vector3(0, 1, 0);
-
-ThreeUtils.makeSpriteMesh = function(tex, geo)
-{
-	if (this.serverMode)
-	{
-		return new THREE.Object3D();
-	}
-	else
-	{
-		var material = new THREE.MeshBasicMaterial({ map:tex, transparent:true });
-		var mesh = new THREE.Mesh(geo, material);
-		return mesh;
-	}
-}
-
-ThreeUtils.makeSpriteGeo = function(width, height)
-{
-	var geo = new THREE.PlaneGeometry(width, height);
-	geo.applyMatrix(ThreeUtils.c_planeCorrection);
-	return geo;
-}
-
-ThreeUtils.distance = function(thing1, thing2)
-{
-	var dx = thing1.x - thing2.x;
-	var dy = thing1.y - thing2.y;
-	return Math.sqrt(dx*dx+dy*dy);
-}
-
-// loads the specified texture or returns a cached version
-ThreeUtils.loadTexture = function(url)
-{
-	if (this.serverMode)
-	{
-		return undefined;
-	}
-	if (this.textureCache === undefined)
-	{
-		this.textureCache = {};
-	}
-	if (this.textureCache[url])
-	{
-		return this.textureCache[url];
-	}
-	else
-	{
-		this.textureCache[url] = this.textureLoader.load(url);
-		return this.textureCache[url];
-	}
-}
-
-ThreeUtils.setTextureNpot = function(texture)
-{
-	if (texture)
-	{
-		texture.generateMipmaps = false
-		texture.wrapS = texture.wrapT = THREE.ClampToEdgeWrapping;
-		texture.minFilter = texture.maxFilter = THREE.NearestFilter;
-	}
-}
-
-ThreeUtils.setTilesheetGeometry = function(geo, x, y, countX, countY, flipX, flipY)
-{
-	uvs = geo.faceVertexUvs[0];
-	var l = x/countX;
-	var b = 1-y/countY;
-	var r = (x+1)/countX;
-	var t = 1-(y+1)/countY;
-	if (flipX){var temp=l;l=r;r=temp;}
-	if (flipY){var temp=t;t=b;b=temp;}
-	uvs[0][0].set(l,b);
-	uvs[0][1].set(l,t);
-	uvs[0][2].set(r,b);
-	uvs[1][0].set(l,t);
-	uvs[1][1].set(r,t);
-	uvs[1][2].set(r,b);
-	geo.uvsNeedUpdate = true;
-}
-
-// sets an html div to display a single image from an atlas
-ThreeUtils.setElementToAtlasImage = function(element, atlas, key)
-{
-	// set icon using background position
-	var atlasCoords = atlas.sprites[key];
-	if (atlasCoords === undefined)
-	{
-		atlasCoords = atlas.sprites["missing"];
-	}
-	if (atlasCoords !== undefined)
-	{
-		element.style["background-image"] = "url(\"" + atlas.url + "\")";
-		element.style["background-position"] = (-atlasCoords[0]) + "px " + (-atlasCoords[1]) + "px";
-		element.style["width"] = atlasCoords[2] + "px";
-		element.style["height"] = atlasCoords[3] + "px";
-	}
-}
-
-ThreeUtils.loadAtlas = function(url,width,height,data,suppressTextureLoad)
-{
-	var atlas = {url:url,width:width,height:height,data:data};
-	if (!suppressTextureLoad)
-	{
-		atlas.texture = this.textureLoader.load(url);
-	}
-	this.setTextureNpot(atlas.texture);
-	return atlas;
-}
-
-ThreeUtils.getAtlasImageWidth = function(atlas,key)
-{
-	return atlas.data[key][2];
-}
-
-ThreeUtils.getAtlasImageHeight = function(atlas,key)
-{
-	return atlas.data[key][3];
-}
-
-//make a sprite mesh for the given texture in the atlas
-//pass dynamic if you want to be able to flip the sprite or dynamically switch its texture
-ThreeUtils.makeAtlasMesh = function(atlas,key,dynamic)
-{
-	if (atlas.data[key] === undefined)
-	{
-		console.error("Atlas '"+atlas.url+"' has no key '"+key+"'.");
-		return null;
-	}
-	if (!atlas.data[key].geo)
-	{
-		atlas.data[key].geo = this.makeSpriteGeo(atlas.data[key][2],atlas.data[key][3]);
-		this.setAtlasUVs(atlas.data[key].geo,atlas,key);
-	}
-	var geo = atlas.data[key].geo
-	if (dynamic)
-	{
-		geo = geo.clone();
-		geo.dynamic = true;
-		geo.atlas_flipx=false;
-		geo.atlas_flipy=false;
-	}
-	var mesh = ThreeUtils.makeSpriteMesh(atlas.texture,geo);
-	mesh.atlas = atlas;
-	mesh.atlas_key = key;
-	return mesh;
-}
-
-ThreeUtils.setAtlasUVs = function(geo,atlas,key,flipX,flipY)
-{
-	if (!atlas)
-	{
-		console.error("Geometry is not atlased.");
-		return;
-	}
-	if (atlas.data[key] === undefined)
-	{
-		console.error("Atlas '"+atlas.url+"' has not key '"+key+"'");
-		return;
-	}
-	
-	uvs = geo.faceVertexUvs[0];
-	var l = atlas.data[key][0]/atlas.width;
-	var b = (1-atlas.data[key][1]/atlas.height);
-	var r = l+atlas.data[key][2]/atlas.width;
-	var t = b-atlas.data[key][3]/atlas.height;
-	if (geo.atlas_flipx){var temp=l;l=r;r=temp;}
-	if (geo.atlas_flipy){var temp=t;t=b;b=temp;}
-	uvs[0][0].set(l,b);
-	uvs[0][1].set(l,t);
-	uvs[0][2].set(r,b);
-	uvs[1][0].set(l,t);
-	uvs[1][1].set(r,t);
-	uvs[1][2].set(r,b);
-	geo.uvsNeedUpdate = true;
-	
-	verts = geo.vertices;
-	
-	geo.verticesNeedUpdate = true;
-}
-
-ThreeUtils.setAtlasGeometry = function(geo,atlas,key,flipX,flipY)
-{
-	if (!atlas)
-	{
-		console.error("Geometry is not atlased.");
-		return;
-	}
-	if (atlas.data[key] === undefined)
-	{
-		console.error("Atlas '"+atlas.url+"' has not key '"+key+"'");
-		return;
-	}
-	this.setAtlasUVs(geo,atlas,key,flipX,flipY);
-	
-	var w = atlas.data[key][2]/2;
-	var h = atlas.data[key][3]/2;
-	verts = geo.vertices;
-	verts[0].set(-w,-h,0);
-	verts[1].set(w,-h,0);
-	verts[2].set(-w,h,0);
-	verts[3].set(w,h,0);
-	geo.verticesNeedUpdate = true;
-}
-
-ThreeUtils.setAtlasMeshFlip = function(mesh, flipX, flipY)
-{
-	if (!mesh.geometry)
-	{
-		return;
-	}
-	if (!mesh.geometry.dynamic)
-	{
-		console.error("Geometry is not dynamic.");return;
-	}
-	if (flipX == mesh.geometry.atlas_flipx && flipY == mesh.geometry.atlas_flipy) return;
-	mesh.geometry.atlas_flipx=flipX;
-	mesh.geometry.atlas_flipy=flipY;
-	this.setAtlasUVs(mesh.geometry,mesh.atlas,mesh.atlas_key);
-}
-
-ThreeUtils.setAtlasMeshKey = function(mesh,key)
-{
-	if (!mesh.geometry)
-	{
-		return;
-	}
-	if (!mesh.geometry.dynamic)
-	{
-		console.error("Geometry is not dynamic.");return;
-	}
-	if (key === mesh.atlas_key) return;
-	mesh.atlas_key = key;
-	this.setAtlasGeometry(mesh.geometry,mesh.atlas,mesh.atlas_key);
-}
-
-
-ThreeUtils.lineCircleIntersection = function(a, b, center, radius)
-{
-	var attackVector = new THREE.Vector3().copy(b).sub(a);
-	var meToTargetVector = new THREE.Vector3().copy(center).sub(a);
-	attackVector.z = meToTargetVector.z = 0;
-	attackVector = meToTargetVector.projectOnVector(attackVector);
-	attackVector = attackVector.sub(center).add(a);
-	attackVector.z = 0;
-	return attackVector.lengthSq() <= radius * radius;
-}
-
-ThreeUtils.lineSegmentCircleIntersection = function(a, b, center, radius)
-{
-	var attackVector = new THREE.Vector3().copy(b).sub(a);
-	var segmentLengthSq = attackVector.lengthSq();
-	var meToTargetVector = new THREE.Vector3().copy(center).sub(a);
-	attackVector.z = meToTargetVector.z = 0;
-	attackVector = meToTargetVector.projectOnVector(attackVector);
-	
-	var d = meToTargetVector.dot(attackVector);
-	
-	// circle is behind the segment
-	if (d < 0) return false;
-	
-	attackVector.normalize().multiplyScalar(d);
-	
-	// check that the segment range is correct
-	var projectionLengthSq = attackVector.lengthSq();
-	if (projectionLengthSq > segmentLengthSq)
-	{
-		return false;
-	}
-	
-	// check that the line is within the circle
-	attackVector = attackVector.sub(center).add(a);
-	attackVector.z = 0;
-	return attackVector.lengthSq() <= radius * radius;
-}
-
-},{"three":2}],9:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 Math.sign = Math.sign || function(val)
 {
 	if (val < 0)
@@ -42792,7 +42719,7 @@ Math.sign = Math.sign || function(val)
 		return 0;
 }
 
-Math.clamp = function(val, a, b)
+Math.clamp = Math.clamp || function(val, a, b)
 {
 	if (val < a) return a;
 	if (val > b) return b;
@@ -42809,11 +42736,19 @@ Math.randomRange = function(minInclusive, maxExclusive)
 	return Math.randomInt(maxExclusive-minInclusive)+minInclusive;
 }
 
+/**
+ * Converts the specified angle in radians to degrees.
+ * @param {Number} rad
+ */
 Math.rad2Deg = function(rad)
 {
 	return (rad / Math.PI) * 180;
 }
 
+/**
+ * Converts the specified angle in degrees to radians.
+ * @param {Number} deg
+ */
 Math.deg2Rad = function(deg)
 {
 	return (deg / 180) * Math.PI;
@@ -42859,4 +42794,431 @@ Array.prototype.contains = Array.prototype.contains || function contains(object)
 	return false;
 };
 
-},{}]},{},[1]);
+},{}],10:[function(require,module,exports){
+
+ThreeUtils = require("./index.js")
+
+/**
+ * Creates a new atlas.
+ * @class
+ * @param {string} url The url of the atlas image.
+ * @param {Number} width The pixel width of the image. //TODO: don't require this
+ * @param {Number} height The pixel height of the image. //TODO: don't require this
+ * @param {Object} data The atlas key data.
+ * @param {Boolean} suppressTextureLoad If set, does not automatically load the texture.
+ */
+Atlas = function(url, width, height, data, suppressTextureLoad)
+{
+	this.url = url;
+	this.width = width;
+	this.height = height;
+	this.data = data;
+	if (!suppressTextureLoad)
+	{
+		this.texture = ThreeUtils.loadTexture(url);
+	}
+	ThreeUtils.setTextureNpot(this.texture);
+}
+
+/**
+ * Returns the width of the given sprite in the atlas.
+ * @param {string} key The sprite key.
+ * @returns {Number}
+ */
+Atlas.prototype.getSpriteWidth = function(key)
+{
+	return this.data[key][2];
+}
+
+/**
+ * Returns the height of the given sprite in the atlas.
+ * @param {string} key The sprite key.
+ * @returns {Number}
+ */
+Atlas.prototype.getSpriteHeight = function(key)
+{
+	return this.data[key][3];
+}
+
+module.exports = Atlas;
+
+},{"./index.js":11}],11:[function(require,module,exports){
+
+THREE = require("three");
+
+/** @namespace */
+var ThreeUtils = 
+{
+	c_planeCorrection: new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(Math.PI, 0, 0)),
+	
+	textureLoader: new THREE.TextureLoader(),
+
+	// if set, all calls return dummy objects instead of real visual objects
+	serverMode: false,
+
+	Atlas: require("./Atlas.js"),
+
+	/**
+	 * Creates a THREE.Mesh with a unique material.
+	 * @param {THREE.Texture} texture Texture for the mesh.
+	 * @param {THREE.Geometry} geometry Geometry for the mesh.
+	 * @returns {THREE.Mesh}
+	 */
+	makeSpriteMesh: function(texture, geometry)
+	{
+		if (this.serverMode)
+		{
+			return new THREE.Object3D();
+		}
+		else
+		{
+			var material = new THREE.MeshBasicMaterial({ map:texture, transparent:true });
+			var mesh = new THREE.Mesh(geometry, material);
+			return mesh;
+		}
+	},
+
+	/**
+	 * Creates a plane mesh with the specified dimensions.
+	 * @param {Number} width The width of the plane.
+	 * @param {Number} height The height of the plane.
+	 * @returns {THREE.Geometry}
+	 */
+	makeSpriteGeo: function(width, height)
+	{
+		var geo = new THREE.PlaneGeometry(width, height);
+		geo.applyMatrix(ThreeUtils.c_planeCorrection);
+		return geo;
+	},
+
+	/**
+	 * Calculates the distance between two THREE.Object3D or THREE.Vector3.
+	 * @param {THREE.Object3D} thing1
+	 * @param {THREE.Object3D} thing2
+	 * @returns {Number}
+	 */
+	distance: function(thing1, thing2)
+	{
+		return Math.sqrt(ThreeUtils.distanceSq(thing1, thing2));
+	},
+
+	/**
+	 * Calculates the squared distance between two THREE.Object3D or THREE.Vector3.
+	 * @param {THREE.Object3D|THREE.Vector3} thing1
+	 * @param {THREE.Object3D|THREE.Vector3} thing2
+	 * @returns {Number}
+	 */
+	distanceSq: function(thing1, thing2)
+	{
+		var x1 = thing1.position !== undefined ? thing1.position.x : thing1.x;
+		var y1 = thing1.position !== undefined ? thing1.position.y : thing1.y;
+		var x2 = thing2.position !== undefined ? thing2.position.x : thing1.x;
+		var y2 = thing2.position !== undefined ? thing2.position.y : thing1.y;
+		var dx = x1-x2;
+		var dy = y1-y2;
+		return dx*dx+dy*dy;
+	},
+
+	/**
+	 * Loads the specified texture. Caches repeated calls.
+	 * @param {string} url The URL of the texture.
+	 * @returns {THREE.Texture}
+	 */
+	loadTexture: function(url)
+	{
+		if (this.serverMode)
+		{
+			return undefined;
+		}
+		if (this.textureCache === undefined)
+		{
+			this.textureCache = {};
+		}
+		if (this.textureCache[url])
+		{
+			return this.textureCache[url];
+		}
+		else
+		{
+			this.textureCache[url] = this.textureLoader.load(url);
+			return this.textureCache[url];
+		}
+	},
+
+	/**
+	 * Sets the texture as okay to be non-power-of-two.
+	 * @param {THREE.Texture} texture
+	 * @returns {THREE.Texture}
+	 */
+	setTextureNpot: function(texture)
+	{
+		if (texture)
+		{
+			texture.generateMipmaps = false
+			texture.wrapS = texture.wrapT = THREE.ClampToEdgeWrapping;
+			texture.minFilter = texture.maxFilter = THREE.NearestFilter;
+		}
+		return texture;
+	},
+
+	/**
+	 * Sets the UVs of the geometry to display the specified tile.
+	 * @param {THREE.Geometry} geometry
+	 * @param {Number} x The x index of the tile.
+	 * @param {Number} y The y index of the tile.
+	 * @param {Number} countX The number of tiles horizontally on the image.
+	 * @param {Number} countY The number of tiles vertically on the image.
+	 * @param {Boolean} flipX Flip the image horizontally?
+	 * @param {Boolean} flipY Flip the image vertically?
+	 * @returns {THREE.Geometry}
+	 */
+	setTilesheetGeometry: function(geometry, x, y, countX, countY, flipX, flipY)
+	{
+		uvs = geometry.faceVertexUvs[0];
+		var l = x/countX;
+		var b = 1-y/countY;
+		var r = (x+1)/countX;
+		var t = 1-(y+1)/countY;
+		if (flipX){var temp=l;l=r;r=temp;}
+		if (flipY){var temp=t;t=b;b=temp;}
+		uvs[0][0].set(l,b);
+		uvs[0][1].set(l,t);
+		uvs[0][2].set(r,b);
+		uvs[1][0].set(l,t);
+		uvs[1][1].set(r,t);
+		uvs[1][2].set(r,b);
+		geometry.uvsNeedUpdate = true;
+		return geometry;
+	},
+
+	/**
+	 * Sets an HTML div to display an image in an atlas.
+	 * @param {Element} element The element to configure.
+	 * @param {Atlas} atlas The atlas to us.
+	 * @param {string} key The key to use from the atlas.
+	 * @returns {Element}
+	 */
+	setElementToAtlasImage: function(element, atlas, key)
+	{
+		// set icon using background position
+		var atlasCoords = atlas.sprites[key];
+		if (atlasCoords === undefined)
+		{
+			atlasCoords = atlas.sprites["missing"];
+		}
+		if (atlasCoords !== undefined)
+		{
+			element.style["background-image"] = "url(\"" + atlas.url + "\")";
+			element.style["background-position"] = (-atlasCoords[0]) + "px " + (-atlasCoords[1]) + "px";
+			element.style["width"] = atlasCoords[2] + "px";
+			element.style["height"] = atlasCoords[3] + "px";
+		}
+		return element;
+	},
+
+	/**
+	 * Creates a mesh for the given sprite in the atlas.
+	 * @param {ThreeUtils.Atlas} atlas
+	 * @param {string} key
+	 * @param {Boolean} dynamic Set if you want to be able to flip the sprite or dynamically switch its texture.
+	 */
+	makeAtlasMesh: function(atlas, key, dynamic)
+	{
+		if (atlas.data[key] === undefined)
+		{
+			console.error("Atlas '"+atlas.url+"' has no key '"+key+"'.");
+			return null;
+		}
+		if (!atlas.data[key].geo)
+		{
+			atlas.data[key].geo = this.makeSpriteGeo(atlas.data[key][2],atlas.data[key][3]);
+			this._setAtlasUVs(atlas.data[key].geo,atlas,key);
+		}
+		var geo = atlas.data[key].geo
+		if (dynamic)
+		{
+			geo = geo.clone();
+			geo.dynamic = true;
+			geo.atlas_flipx=false;
+			geo.atlas_flipy=false;
+		}
+		var mesh = ThreeUtils.makeSpriteMesh(atlas.texture,geo);
+		mesh.atlas = atlas;
+		mesh.atlas_key = key;
+		return mesh;
+	},
+
+	_setAtlasUVs: function(geo,atlas,key,flipX,flipY)
+	{
+		if (!atlas)
+		{
+			console.error("Geometry is not atlased.");
+			return;
+		}
+		if (atlas.data[key] === undefined)
+		{
+			console.error("Atlas '"+atlas.url+"' has not key '"+key+"'");
+			return;
+		}
+		
+		uvs = geo.faceVertexUvs[0];
+		var l = atlas.data[key][0]/atlas.width;
+		var b = (1-atlas.data[key][1]/atlas.height);
+		var r = l+atlas.data[key][2]/atlas.width;
+		var t = b-atlas.data[key][3]/atlas.height;
+		if (geo.atlas_flipx){var temp=l;l=r;r=temp;}
+		if (geo.atlas_flipy){var temp=t;t=b;b=temp;}
+		uvs[0][0].set(l,b);
+		uvs[0][1].set(l,t);
+		uvs[0][2].set(r,b);
+		uvs[1][0].set(l,t);
+		uvs[1][1].set(r,t);
+		uvs[1][2].set(r,b);
+		geo.uvsNeedUpdate = true;
+		
+		verts = geo.vertices;
+		
+		geo.verticesNeedUpdate = true;
+	},
+
+	/**
+	 * Sets the UVs of the specified geometry to display the specified atlas sprite.
+	 * @param {THREE.Geometry} geometry
+	 * @param {ThreeUtils.Atlas} atlas
+	 * @param {string} key
+	 * @param {Boolean} flipX
+	 * @param {Boolean} flipY
+	 */
+	setAtlasGeometry: function(geometry, atlas, key, flipX, flipY)
+	{
+		if (!atlas)
+		{
+			console.error("Geometry is not atlased.");
+			return;
+		}
+		if (atlas.data[key] === undefined)
+		{
+			console.error("Atlas '"+atlas.url+"' has not key '"+key+"'");
+			return;
+		}
+		this._setAtlasUVs(geometry,atlas,key,flipX,flipY);
+		
+		var w = atlas.data[key][2]/2;
+		var h = atlas.data[key][3]/2;
+		verts = geometry.vertices;
+		verts[0].set(-w,-h,0);
+		verts[1].set(w,-h,0);
+		verts[2].set(-w,h,0);
+		verts[3].set(w,h,0);
+		geometry.verticesNeedUpdate = true;
+	},
+
+	/**
+	 * Sets the flipped state of the specified atlas mesh.
+	 * @param {THREE.Mesh} mesh
+	 * @param {Boolean} flipX
+	 * @param {Boolean} flipY
+	 */
+	setAtlasMeshFlip: function(mesh, flipX, flipY)
+	{
+		if (!mesh.geometry)
+		{
+			return;
+		}
+		if (!mesh.geometry.dynamic)
+		{
+			console.error("Geometry is not dynamic.");return;
+		}
+		if (flipX == mesh.geometry.atlas_flipx && flipY == mesh.geometry.atlas_flipy) return;
+		mesh.geometry.atlas_flipx=flipX;
+		mesh.geometry.atlas_flipy=flipY;
+		this._setAtlasUVs(mesh.geometry,mesh.atlas,mesh.atlas_key);
+	},
+
+	/**
+	 * Sets the UVs of the specified atlas mesh to the specified sprite key.
+	 * @param {THREE.Mesh} mesh
+	 * @param {string} key
+	 */
+	setAtlasMeshKey: function(mesh, key)
+	{
+		if (!mesh.geometry)
+		{
+			return;
+		}
+		if (!mesh.geometry.dynamic)
+		{
+			console.error("Geometry is not dynamic.");return;
+		}
+		if (key === mesh.atlas_key) return;
+		mesh.atlas_key = key;
+		this.setAtlasGeometry(mesh.geometry,mesh.atlas,mesh.atlas_key);
+	},
+
+	/**
+	 * Returns true if the line passing through a and b intersects the specified circle.
+	 * @param {Number} a
+	 * @param {Number} b
+	 * @param {THREE.Vector2} center The center of the circle.
+	 * @param {Number} radius The radius of the circle.
+	 */
+	lineCircleIntersection: function(a, b, center, radius)
+	{
+		var attackVector = new THREE.Vector3().copy(b).sub(a);
+		var meToTargetVector = new THREE.Vector3().copy(center).sub(a);
+		attackVector.z = meToTargetVector.z = 0;
+		attackVector = meToTargetVector.projectOnVector(attackVector);
+		attackVector = attackVector.sub(center).add(a);
+		attackVector.z = 0;
+		return attackVector.lengthSq() <= radius * radius;
+	},
+
+	/**
+	 * Returns true if the line segment from a to b intersects the specified circle.
+	 * @param {Number} a
+	 * @param {Number} b
+	 * @param {THREE.Vector2} center The center of the circle.
+	 * @param {Number} radius The radius of the circle.
+	 */
+	lineSegmentCircleIntersection: function(a, b, center, radius)
+	{
+		var attackVector = new THREE.Vector3().copy(b).sub(a);
+		var segmentLengthSq = attackVector.lengthSq();
+		var meToTargetVector = new THREE.Vector3().copy(center).sub(a);
+		attackVector.z = meToTargetVector.z = 0;
+		attackVector = meToTargetVector.projectOnVector(attackVector);
+		
+		var d = meToTargetVector.dot(attackVector);
+		
+		// circle is behind the segment
+		if (d < 0) return false;
+		
+		attackVector.normalize().multiplyScalar(d);
+		
+		// check that the segment range is correct
+		var projectionLengthSq = attackVector.lengthSq();
+		if (projectionLengthSq > segmentLengthSq)
+		{
+			return false;
+		}
+		
+		// check that the line is within the circle
+		attackVector = attackVector.sub(center).add(a);
+		attackVector.z = 0;
+		return attackVector.lengthSq() <= radius * radius;
+	}
+};
+
+module.exports = ThreeUtils;
+
+THREE.Vector2.ZeroVector = new THREE.Vector2();
+
+THREE.Vector3.ZeroVector = new THREE.Vector3();
+THREE.Vector3.ForwardVector = new THREE.Vector3(0, 0, 1);
+THREE.Vector3.BackVector = new THREE.Vector3(0, 0, -1);
+THREE.Vector3.LeftVector = new THREE.Vector3(-1, 0, 0);
+THREE.Vector3.RightVector = new THREE.Vector3(1, 0, 0);
+THREE.Vector3.UpVector = new THREE.Vector3(0, -1, 0);
+THREE.Vector3.DownVector = new THREE.Vector3(0, 1, 0);
+
+},{"./Atlas.js":10,"three":2}]},{},[1]);

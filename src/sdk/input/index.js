@@ -28,213 +28,305 @@ module.exports = Input =
 	GA_RIGHTSTICK_Y: 3,
 	
 	FIRST_PLAYER: 0, //TODO: dynamic
-};
 
-Input.Keyboard = require("./keyboard.js");
-Input.Mouse = require("./mouse.js");
+	Keyboard: require("./keyboard.js"),
+	Mouse: require("./mouse.js"),
 
-Input.init = function()
-{
-	this.Keyboard.init();
-	this.Mouse.init();
-}
-
-Input.actionMenuLeft = function()
-{
-	return this.Keyboard.keyPressed(this.Keyboard.LEFT) || this.Keyboard.keyPressed("a")
-		|| this.gamepadAxisPressed(this.FIRST_PLAYER, this.GA_LEFTSTICK_X) < 0
-		|| this.gamepadButtonPressed(this.FIRST_PLAYER, this.GB_DPAD_LEFT);
-}
-
-Input.actionMenuRight = function()
-{
-	return this.Keyboard.keyPressed(this.Keyboard.RIGHT) || this.Keyboard.keyPressed("d")
-		|| this.gamepadAxisPressed(this.FIRST_PLAYER, this.GA_LEFTSTICK_X) > 0
-		|| this.gamepadButtonPressed(this.FIRST_PLAYER, this.GB_DPAD_RIGHT);
-}
-
-Input.actionMenuUp = function()
-{
-	return this.Keyboard.keyPressed(this.Keyboard.UP) || this.Keyboard.keyPressed("w")
-		|| this.gamepadAxisPressed(this.FIRST_PLAYER, this.GA_LEFTSTICK_Y) < 0
-		|| this.gamepadButtonPressed(this.FIRST_PLAYER, this.GB_DPAD_UP);
-}
-
-Input.actionMenuDown = function()
-{
-	return this.Keyboard.keyPressed(this.Keyboard.DOWN) || this.Keyboard.keyPressed("s")
-		|| this.gamepadAxisPressed(this.FIRST_PLAYER, this.GA_LEFTSTICK_Y) > 0
-		|| this.gamepadButtonPressed(this.FIRST_PLAYER, this.GB_DPAD_DOWN);
-}
-
-Input.actionMenuAccept = function()
-{
-	return this.Keyboard.keyPressed(this.Keyboard.SPACE) || this.Keyboard.keyPressed(this.Keyboard.ENTER)
-		|| this.gamepadButtonPressed(this.FIRST_PLAYER, this.GB_A);
-}
-
-Input.actionMenuCancel = function()
-{
-	return this.Keyboard.keyPressed(this.Keyboard.ESCAPE) || this.gamepadButtonPressed(this.FIRST_PLAYER, this.GB_B);
-}
-
-Input.actionGamePause = function()
-{
-	return this.Keyboard.keyPressed(this.Keyboard.ESCAPE) || this.gamepadButtonPressed(this.FIRST_PLAYER, this.GB_START);
-}
-
-Input.getGamepad = function(gamepad)
-{
-	if (this.gamepads && this.gamepads[gamepad])
-		return this.gamepads[gamepad];
-	else
-		return null;
-};
-
-Input.gamepadExists = function(gamepad)
-{
-	if (this.gamepads && this.gamepads[gamepad])
-		return true;
-	else
-		return false;
-};
-
-Input.gamepadConnected = function(gamepad)
-{
-	if (this.gamepads && this.gamepads[gamepad] && this.gamepads[gamepad].connected)
-		return true;
-	else
-		return false;
-};
-
-Input.gamepadButtonPressed = function(gamepad, button)
-{
-	return this.gamepadButtonDown(gamepad, button) && !this.gamepadButtonDownOld(gamepad, button);
-};
-
-Input.gamepadButtonReleased = function(gamepad, button)
-{
-	return this.gamepadButtonUp(gamepad, button) && !this.gamepadButtonUpOld(gamepad, button);
-};
-
-Input.gamepadButtonUp = function(gamepad, button)
-{
-	if (this.gamepads && this.gamepads[gamepad] && this.gamepads[gamepad].buttons.length > button)
-		return !this.gamepads[gamepad].buttons[button].pressed;
-	else
-		return false;
-};
-
-Input.gamepadButtonDown = function(gamepad, button)
-{
-	if (this.gamepads && this.gamepads[gamepad] && this.gamepads[gamepad].buttons.length > button)
-		return this.gamepads[gamepad].buttons[button].pressed;
-	else
-		return false;
-};
-
-Input.gamepadButtonUpOld = function(gamepad, button)
-{
-	if (this.oldGamepads && this.oldGamepads[gamepad] && this.oldGamepads[gamepad].buttons.length > button)
-		return !this.oldGamepads[gamepad].buttons[button].pressed;
-	else
-		return false;
-};
-
-Input.gamepadButtonDownOld = function(gamepad, button)
-{
-	if (this.oldGamepads && this.oldGamepads[gamepad] && this.oldGamepads[gamepad].buttons.length > button)
-		return this.oldGamepads[gamepad].buttons[button].pressed;
-	else
-		return false;
-};
-
-Input.gamepadButtonValue = function(gamepad, button)
-{
-	if (this.gamepads && this.gamepads[gamepad] && this.gamepads[gamepad].buttons.length > button)
-		return this.gamepads[gamepad].buttons[button].value;
-	else
-		return 0;
-};
-
-Input.gamepadAxis = function(gamepad, axis)
-{
-	if (this.gamepads && this.gamepads[gamepad] && this.gamepads[gamepad].axes.length > axis)
+	/**
+	 * Called by the SDK to initialize the input system.
+	 */
+	_init: function()
 	{
-		var val = this.gamepads[gamepad].axes[axis];
-		if (Math.abs(val) <= this.DEAD_ZONE) val = 0;
-		return val;
-	}
-	else
-		return 0;
-};
+		this.Keyboard._init();
+		this.Mouse._init();
+	},
 
-Input.gamepadOldAxis = function(gamepad, axis)
-{
-	if (this.oldGamepads && this.oldGamepads[gamepad] && this.oldGamepads[gamepad].axes.length > axis)
+	/**
+	 * Called by the SDK to destroy the input system.
+	 */
+	_destroy: function()
 	{
-		var val = this.oldGamepads[gamepad].axes[axis];
-		if (Math.abs(val) <= this.DEAD_ZONE) val = 0;
-		return val;
-	}
-	else
-		return 0;
-};
+		this.Keyboard._destroy();
+		this.Mouse._destroy();
+	},
 
-Input.gamepadAxisPressed = function(gamepad, axis)
-{
-	if (this.gamepadOldAxis(gamepad, axis) < this.STICK_THRESHOLD && this.gamepadAxis(gamepad, axis) >= this.STICK_THRESHOLD)
-		return 1;
-	else if (this.gamepadOldAxis(gamepad, axis) > -this.STICK_THRESHOLD && this.gamepadAxis(gamepad, axis) <= -this.STICK_THRESHOLD)
-		return -1;
-	else
-		return 0;
-};
-
-Input.cloneGamepadState = function(source)
-{
-	if (!source) return null;
-	
-	var target = [];
-	target.length = source.length;
-	for (var i = 0; i < source.length; i++)
+	/**
+	 * Returns true if a 'left' control was pressed.
+	 * @returns {Boolean}
+	 */
+	actionMenuLeft: function()
 	{
-		if (source[i])
+		return this.Keyboard.keyPressed(this.Keyboard.LEFT) || this.Keyboard.keyPressed("a")
+			|| this.gamepadAxisPressed(this.FIRST_PLAYER, this.GA_LEFTSTICK_X) < 0
+			|| this.gamepadButtonPressed(this.FIRST_PLAYER, this.GB_DPAD_LEFT);
+	},
+
+	/**
+	 * Returns true if a 'right' control was pressed.
+	 * @returns {Boolean}
+	 */
+	actionMenuRight: function()
+	{
+		return this.Keyboard.keyPressed(this.Keyboard.RIGHT) || this.Keyboard.keyPressed("d")
+			|| this.gamepadAxisPressed(this.FIRST_PLAYER, this.GA_LEFTSTICK_X) > 0
+			|| this.gamepadButtonPressed(this.FIRST_PLAYER, this.GB_DPAD_RIGHT);
+	},
+
+	/**
+	 * Returns true if an 'up' control was pressed.
+	 * @returns {Boolean}
+	 */
+	actionMenuUp: function()
+	{
+		return this.Keyboard.keyPressed(this.Keyboard.UP) || this.Keyboard.keyPressed("w")
+			|| this.gamepadAxisPressed(this.FIRST_PLAYER, this.GA_LEFTSTICK_Y) < 0
+			|| this.gamepadButtonPressed(this.FIRST_PLAYER, this.GB_DPAD_UP);
+	},
+
+	/**
+	 * Returns true if a 'down' control was pressed.
+	 * @returns {Boolean}
+	 */
+	actionMenuDown: function()
+	{
+		return this.Keyboard.keyPressed(this.Keyboard.DOWN) || this.Keyboard.keyPressed("s")
+			|| this.gamepadAxisPressed(this.FIRST_PLAYER, this.GA_LEFTSTICK_Y) > 0
+			|| this.gamepadButtonPressed(this.FIRST_PLAYER, this.GB_DPAD_DOWN);
+	},
+
+	/**
+	 * Returns true if an 'accept' control was pressed.
+	 * @returns {Boolean}
+	 */
+	actionMenuAccept: function()
+	{
+		return this.Keyboard.keyPressed(this.Keyboard.SPACE) || this.Keyboard.keyPressed(this.Keyboard.ENTER)
+			|| this.gamepadButtonPressed(this.FIRST_PLAYER, this.GB_A);
+	},
+
+	/**
+	 * Returns true if a 'cancel' control was pressed.
+	 * @returns {Boolean}
+	 */
+	actionMenuCancel: function()
+	{
+		return this.Keyboard.keyPressed(this.Keyboard.ESCAPE) || this.gamepadButtonPressed(this.FIRST_PLAYER, this.GB_B);
+	},
+
+	/**
+	 * Returns true if a 'pause' control was pressed.
+	 * @returns {Boolean}
+	 */
+	actionGamePause: function()
+	{
+		return this.Keyboard.keyPressed(this.Keyboard.ESCAPE) || this.gamepadButtonPressed(this.FIRST_PLAYER, this.GB_START);
+	},
+
+	/**
+	 * Gets raw information for the gamepad at the specified index.
+	 * @param {Number} index Gamepad index.
+	 */
+	getGamepad: function(index)
+	{
+		if (this.gamepads && this.gamepads[index])
+			return this.gamepads[index];
+		else
+			return null;
+	},
+
+	/**
+	 * Returns true if there is a gamepad at the specified index.
+	 * @param {Number} index Gamepad index.
+	 * @returns {Boolean}
+	 */
+	gamepadExists: function(index)
+	{
+		if (this.gamepads && this.gamepads[index])
+			return true;
+		else
+			return false;
+	},
+
+	/**
+	 * Returns true if there is a connected gamepad at the specified index.
+	 * @param {Number} index Gamepad index.
+	 * @returns {Boolean}
+	 */
+	gamepadConnected: function(index)
+	{
+		if (this.gamepads && this.gamepads[index] && this.gamepads[index].connected)
+			return true;
+		else
+			return false;
+	},
+
+	/**
+	 * Returns true on the frame the specified gamepad presses the specified button.
+	 * @param {Number} index Gamepad index.
+	 * @param {Number} button See constant definitions.
+	 */
+	gamepadButtonPressed: function(index, button)
+	{
+		return this.gamepadButtonDown(index, button) && !this._gamepadButtonDownOld(index, button);
+	},
+
+	/**
+	 * Returns true on the frame the specified gamepad releases the specified button.
+	 * @param {Number} index Gamepad index.
+	 * @param {Number} button See constant definitions.
+	 */
+	gamepadButtonReleased: function(index, button)
+	{
+		return this.gamepadButtonUp(index, button) && !this._gamepadButtonUpOld(index, button);
+	},
+
+	/**
+	 * Returns true if the specified button on the specified gamepad is not down.
+	 * @param {Number} index Gamepad index.
+	 * @param {Number} button See constant definitions.
+	 */
+	gamepadButtonUp: function(index, button)
+	{
+		if (this.gamepads && this.gamepads[index] && this.gamepads[index].buttons.length > button)
+			return !this.gamepads[index].buttons[button].pressed;
+		else
+			return false;
+	},
+
+	/**
+	 * Returns true if the specified button on the specified gamepad is down.
+	 * @param {Number} index Gamepad index.
+	 * @param {Number} button See constant definitions.
+	 */
+	gamepadButtonDown: function(index, button)
+	{
+		if (this.gamepads && this.gamepads[index] && this.gamepads[index].buttons.length > button)
+			return this.gamepads[index].buttons[button].pressed;
+		else
+			return false;
+	},
+
+	_gamepadButtonUpOld: function(index, button)
+	{
+		if (this.oldGamepads && this.oldGamepads[index] && this.oldGamepads[index].buttons.length > button)
+			return !this.oldGamepads[index].buttons[button].pressed;
+		else
+			return false;
+	},
+
+	_gamepadButtonDownOld: function(index, button)
+	{
+		if (this.oldGamepads && this.oldGamepads[index] && this.oldGamepads[index].buttons.length > button)
+			return this.oldGamepads[index].buttons[button].pressed;
+		else
+			return false;
+	},
+
+	/**
+	 * Returns the raw value of the specified gamepad button.
+	 * @param {Number} index Gamepad index.
+	 * @param {Number} button See constant definitions.
+	 */
+	gamepadButtonValue: function(index, button)
+	{
+		if (this.gamepads && this.gamepads[index] && this.gamepads[index].buttons.length > button)
+			return this.gamepads[index].buttons[button].value;
+		else
+			return 0;
+	},
+
+	/**
+	 * Returns the value of the specified gamepad axis.
+	 * @param {Number} index Gamepad index.
+	 * @param {Number} axisIndex See constant definitions.
+	 */
+	gamepadAxis: function(index, axisIndex)
+	{
+		if (this.gamepads && this.gamepads[index] && this.gamepads[index].axes.length > axisIndex)
 		{
-			var gamepad = source[i];
-			var state = {};
-			state.buttons = [];
-			state.buttons.length = gamepad.buttons.length;
-			state.axes = gamepad.axes.splice(0);
-			for (var b = 0; b < gamepad.buttons.length; b++)
+			var val = this.gamepads[index].axes[axisIndex];
+			if (Math.abs(val) <= this.DEAD_ZONE) val = 0;
+			return val;
+		}
+		else
+			return 0;
+	},
+
+	_gamepadOldAxis: function(index, axisIndex)
+	{
+		if (this.oldGamepads && this.oldGamepads[index] && this.oldGamepads[index].axes.length > axisIndex)
+		{
+			var val = this.oldGamepads[index].axes[axisIndex];
+			if (Math.abs(val) <= this.DEAD_ZONE) val = 0;
+			return val;
+		}
+		else
+			return 0;
+	},
+
+	/**
+	 * Returns 1 or -1 on the first frame the specified axis is pressed in that direction, or 0 if it isn't pressed.
+	 * @param {Number} index Gamepad index.
+	 * @param {Number} axisIndex See constant definitions.
+	 */
+	gamepadAxisPressed: function(index, axisIndex)
+	{
+		if (this._gamepadOldAxis(index, axisIndex) < this.STICK_THRESHOLD && this.gamepadAxis(index, axisIndex) >= this.STICK_THRESHOLD)
+			return 1;
+		else if (this._gamepadOldAxis(index, axisIndex) > -this.STICK_THRESHOLD && this.gamepadAxis(index, axisIndex) <= -this.STICK_THRESHOLD)
+			return -1;
+		else
+			return 0;
+	},
+
+	_cloneGamepadState: function(source)
+	{
+		if (!source) return null;
+		
+		var target = [];
+		target.length = source.length;
+		for (var i = 0; i < source.length; i++)
+		{
+			if (source[i])
 			{
-				var obj = {pressed:gamepad.buttons[b].pressed, value:gamepad.buttons[b].value};
-				state.buttons[b] = obj;
+				var gamepad = source[i];
+				var state = {};
+				state.buttons = [];
+				state.buttons.length = gamepad.buttons.length;
+				state.axes = gamepad.axes.splice(0);
+				for (var b = 0; b < gamepad.buttons.length; b++)
+				{
+					var obj = {pressed:gamepad.buttons[b].pressed, value:gamepad.buttons[b].value};
+					state.buttons[b] = obj;
+				}
+				target[i] = state;
 			}
-			target[i] = state;
+			else
+			{
+				target[i] = null;
+			}
+		}
+		return target;
+	},
+
+	/**
+	 * Called by the SDK each frame.
+	 */
+	_update: function()
+	{
+		if (navigator && navigator.getGamepads)
+		{
+			//HACK: so much garbage
+			this.oldGamepads = this._cloneGamepadState(this.gamepads);
+			this.gamepads = this._cloneGamepadState(navigator.getGamepads());
 		}
 		else
 		{
-			target[i] = null;
+			this.oldGamepads = undefined;
+			this.gamepads = undefined;
 		}
-	}
-	return target;
-}
-
-Input.update = function()
-{
-	if (navigator && navigator.getGamepads)
-	{
-		//TODO: so much garbage
-		this.oldGamepads = this.cloneGamepadState(this.gamepads);
-		this.gamepads = this.cloneGamepadState(navigator.getGamepads());
-	}
-	else
-	{
-		this.oldGamepads = undefined;
-		this.gamepads = undefined;
-	}
-	
-	this.Keyboard.update();
-	this.Mouse.update();
-}
+		
+		this.Keyboard._update();
+		this.Mouse._update();
+	},
+};
