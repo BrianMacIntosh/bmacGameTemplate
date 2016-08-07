@@ -1,11 +1,16 @@
-(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 
+// load the SDK
 bmacSdk = require("./src/sdk/engine");
 bmacSdk.initialize();
 
+// create a game engine
 GameEngine = new bmacSdk.Engine("canvasDiv");
 
+// add the sample game object to the engine
 GameEngine.addObject(require("./src/game/sample.js"));
+
+// that's it!
 
 },{"./src/game/sample.js":3,"./src/sdk/engine":5}],2:[function(require,module,exports){
 // File:src/Three.js
@@ -41773,12 +41778,14 @@ THREE.MorphBlendMesh.prototype.update = function ( delta ) {
 },{}],3:[function(require,module,exports){
 
 ThreeUtils = require("../sdk/threeutils");
+Input = require("../sdk/input");
 
 module.exports = sampleGame =
 {
 	
 };
 
+// 'added' is called by the engine when this object is added
 sampleGame.added = function()
 {
 	this.dirtTexture = ThreeUtils.loadTexture("media/dirt.png");
@@ -41789,18 +41796,27 @@ sampleGame.added = function()
 	GameEngine.scene.add(this.mesh);
 };
 
+// 'removed' is called by the engine when this object is removed
 sampleGame.removed = function()
 {
 	
 };
 
+// 'update' is called by the engine once per frame
 sampleGame.update = function()
 {
-	// move the mesh 5 pixels per second
-	this.mesh.position.x -= 5 * bmacSdk.deltaSec;
+	// move the mesh 50 pixels per second based on input
+	if (Input.Keyboard.keyDown('a') || Input.Keyboard.keyDown(Input.Keyboard.LEFT))
+	{
+		this.mesh.position.x -= 50 * bmacSdk.deltaSec;
+	}
+	if (Input.Keyboard.keyDown('d') || Input.Keyboard.keyDown(Input.Keyboard.RIGHT))
+	{
+		this.mesh.position.x += 50 * bmacSdk.deltaSec;
+	}
 };
 
-},{"../sdk/threeutils":11}],4:[function(require,module,exports){
+},{"../sdk/input":7,"../sdk/threeutils":12}],4:[function(require,module,exports){
 
 bmacSdk = require("./index.js");
 
@@ -41968,10 +41984,12 @@ module.exports = bmacSdk =
  */
 bmacSdk.initialize = function()
 {
+	//TODO: use addEventListener instead
 	window.onblur = document.onfocusout = function()
 	{
 		bmacSdk.isFocused = false;
 	};
+	//TODO: use addEventListener instead
 	window.onfocus = document.onfocusin = function()
 	{
 		bmacSdk.isFocused = true;
@@ -42048,13 +42066,13 @@ bmacSdk._animate = function()
 	}
 };
 
-},{"../input":6,"../polyfills":9,"./engine.js":4,"three":2}],6:[function(require,module,exports){
+},{"../input":7,"../polyfills":10,"./engine.js":4,"three":2}],6:[function(require,module,exports){
 
-module.exports = Input = 
+module.exports = Gamepad =
 {
 	STICK_THRESHOLD: 0.5,
 	DEAD_ZONE: 0.3,
-	
+
 	GB_A: 0,
 	GB_B: 1,
 	GB_X: 2,
@@ -42077,100 +42095,30 @@ module.exports = Input =
 	GA_LEFTSTICK_Y: 1,
 	GA_RIGHTSTICK_X: 2,
 	GA_RIGHTSTICK_Y: 3,
-	
-	FIRST_PLAYER: 0, //TODO: dynamic
 
-	Keyboard: require("./keyboard.js"),
-	Mouse: require("./mouse.js"),
-
-	/**
-	 * Called by the SDK to initialize the input system.
-	 */
 	_init: function()
 	{
-		this.Keyboard._init();
-		this.Mouse._init();
+
 	},
 
-	/**
-	 * Called by the SDK to destroy the input system.
-	 */
+	_update: function()
+	{
+		if (navigator && navigator.getGamepads)
+		{
+			//HACK: so much garbage
+			this.oldGamepads = this._cloneGamepadState(this.gamepads);
+			this.gamepads = this._cloneGamepadState(navigator.getGamepads());
+		}
+		else
+		{
+			this.oldGamepads = undefined;
+			this.gamepads = undefined;
+		}
+	},
+
 	_destroy: function()
 	{
-		this.Keyboard._destroy();
-		this.Mouse._destroy();
-	},
 
-	/**
-	 * Returns true if a 'left' control was pressed.
-	 * @returns {Boolean}
-	 */
-	actionMenuLeft: function()
-	{
-		return this.Keyboard.keyPressed(this.Keyboard.LEFT) || this.Keyboard.keyPressed("a")
-			|| this.gamepadAxisPressed(this.FIRST_PLAYER, this.GA_LEFTSTICK_X) < 0
-			|| this.gamepadButtonPressed(this.FIRST_PLAYER, this.GB_DPAD_LEFT);
-	},
-
-	/**
-	 * Returns true if a 'right' control was pressed.
-	 * @returns {Boolean}
-	 */
-	actionMenuRight: function()
-	{
-		return this.Keyboard.keyPressed(this.Keyboard.RIGHT) || this.Keyboard.keyPressed("d")
-			|| this.gamepadAxisPressed(this.FIRST_PLAYER, this.GA_LEFTSTICK_X) > 0
-			|| this.gamepadButtonPressed(this.FIRST_PLAYER, this.GB_DPAD_RIGHT);
-	},
-
-	/**
-	 * Returns true if an 'up' control was pressed.
-	 * @returns {Boolean}
-	 */
-	actionMenuUp: function()
-	{
-		return this.Keyboard.keyPressed(this.Keyboard.UP) || this.Keyboard.keyPressed("w")
-			|| this.gamepadAxisPressed(this.FIRST_PLAYER, this.GA_LEFTSTICK_Y) < 0
-			|| this.gamepadButtonPressed(this.FIRST_PLAYER, this.GB_DPAD_UP);
-	},
-
-	/**
-	 * Returns true if a 'down' control was pressed.
-	 * @returns {Boolean}
-	 */
-	actionMenuDown: function()
-	{
-		return this.Keyboard.keyPressed(this.Keyboard.DOWN) || this.Keyboard.keyPressed("s")
-			|| this.gamepadAxisPressed(this.FIRST_PLAYER, this.GA_LEFTSTICK_Y) > 0
-			|| this.gamepadButtonPressed(this.FIRST_PLAYER, this.GB_DPAD_DOWN);
-	},
-
-	/**
-	 * Returns true if an 'accept' control was pressed.
-	 * @returns {Boolean}
-	 */
-	actionMenuAccept: function()
-	{
-		return this.Keyboard.keyPressed(this.Keyboard.SPACE) || this.Keyboard.keyPressed(this.Keyboard.ENTER)
-			|| this.gamepadButtonPressed(this.FIRST_PLAYER, this.GB_A);
-	},
-
-	/**
-	 * Returns true if a 'cancel' control was pressed.
-	 * @returns {Boolean}
-	 */
-	actionMenuCancel: function()
-	{
-		return this.Keyboard.keyPressed(this.Keyboard.ESCAPE) || this.gamepadButtonPressed(this.FIRST_PLAYER, this.GB_B);
-	},
-
-	/**
-	 * Returns true if a 'pause' control was pressed.
-	 * @returns {Boolean}
-	 */
-	actionGamePause: function()
-	{
-		return this.Keyboard.keyPressed(this.Keyboard.ESCAPE) || this.gamepadButtonPressed(this.FIRST_PLAYER, this.GB_START);
 	},
 
 	/**
@@ -42216,9 +42164,9 @@ module.exports = Input =
 	 * @param {Number} index Gamepad index.
 	 * @param {Number} button See constant definitions.
 	 */
-	gamepadButtonPressed: function(index, button)
+	buttonPressed: function(index, button)
 	{
-		return this.gamepadButtonDown(index, button) && !this._gamepadButtonDownOld(index, button);
+		return this.buttonDown(index, button) && !this._buttonDownOld(index, button);
 	},
 
 	/**
@@ -42226,9 +42174,9 @@ module.exports = Input =
 	 * @param {Number} index Gamepad index.
 	 * @param {Number} button See constant definitions.
 	 */
-	gamepadButtonReleased: function(index, button)
+	buttonReleased: function(index, button)
 	{
-		return this.gamepadButtonUp(index, button) && !this._gamepadButtonUpOld(index, button);
+		return this.buttonUp(index, button) && !this._buttonUpOld(index, button);
 	},
 
 	/**
@@ -42236,7 +42184,7 @@ module.exports = Input =
 	 * @param {Number} index Gamepad index.
 	 * @param {Number} button See constant definitions.
 	 */
-	gamepadButtonUp: function(index, button)
+	buttonUp: function(index, button)
 	{
 		if (this.gamepads && this.gamepads[index] && this.gamepads[index].buttons.length > button)
 			return !this.gamepads[index].buttons[button].pressed;
@@ -42249,7 +42197,7 @@ module.exports = Input =
 	 * @param {Number} index Gamepad index.
 	 * @param {Number} button See constant definitions.
 	 */
-	gamepadButtonDown: function(index, button)
+	buttonDown: function(index, button)
 	{
 		if (this.gamepads && this.gamepads[index] && this.gamepads[index].buttons.length > button)
 			return this.gamepads[index].buttons[button].pressed;
@@ -42257,7 +42205,7 @@ module.exports = Input =
 			return false;
 	},
 
-	_gamepadButtonUpOld: function(index, button)
+	_buttonUpOld: function(index, button)
 	{
 		if (this.oldGamepads && this.oldGamepads[index] && this.oldGamepads[index].buttons.length > button)
 			return !this.oldGamepads[index].buttons[button].pressed;
@@ -42265,7 +42213,7 @@ module.exports = Input =
 			return false;
 	},
 
-	_gamepadButtonDownOld: function(index, button)
+	_buttonDownOld: function(index, button)
 	{
 		if (this.oldGamepads && this.oldGamepads[index] && this.oldGamepads[index].buttons.length > button)
 			return this.oldGamepads[index].buttons[button].pressed;
@@ -42278,7 +42226,7 @@ module.exports = Input =
 	 * @param {Number} index Gamepad index.
 	 * @param {Number} button See constant definitions.
 	 */
-	gamepadButtonValue: function(index, button)
+	buttonValue: function(index, button)
 	{
 		if (this.gamepads && this.gamepads[index] && this.gamepads[index].buttons.length > button)
 			return this.gamepads[index].buttons[button].value;
@@ -42291,7 +42239,7 @@ module.exports = Input =
 	 * @param {Number} index Gamepad index.
 	 * @param {Number} axisIndex See constant definitions.
 	 */
-	gamepadAxis: function(index, axisIndex)
+	getAxis: function(index, axisIndex)
 	{
 		if (this.gamepads && this.gamepads[index] && this.gamepads[index].axes.length > axisIndex)
 		{
@@ -42303,7 +42251,7 @@ module.exports = Input =
 			return 0;
 	},
 
-	_gamepadOldAxis: function(index, axisIndex)
+	_getOldAxis: function(index, axisIndex)
 	{
 		if (this.oldGamepads && this.oldGamepads[index] && this.oldGamepads[index].axes.length > axisIndex)
 		{
@@ -42320,11 +42268,11 @@ module.exports = Input =
 	 * @param {Number} index Gamepad index.
 	 * @param {Number} axisIndex See constant definitions.
 	 */
-	gamepadAxisPressed: function(index, axisIndex)
+	axisPressed: function(index, axisIndex)
 	{
-		if (this._gamepadOldAxis(index, axisIndex) < this.STICK_THRESHOLD && this.gamepadAxis(index, axisIndex) >= this.STICK_THRESHOLD)
+		if (this._getOldAxis(index, axisIndex) < this.STICK_THRESHOLD && this.getAxis(index, axisIndex) >= this.STICK_THRESHOLD)
 			return 1;
-		else if (this._gamepadOldAxis(index, axisIndex) > -this.STICK_THRESHOLD && this.gamepadAxis(index, axisIndex) <= -this.STICK_THRESHOLD)
+		else if (this._getOldAxis(index, axisIndex) > -this.STICK_THRESHOLD && this.getAxis(index, axisIndex) <= -this.STICK_THRESHOLD)
 			return -1;
 		else
 			return 0;
@@ -42359,30 +42307,123 @@ module.exports = Input =
 		}
 		return target;
 	},
+}
+},{}],7:[function(require,module,exports){
+
+module.exports = Input = 
+{
+	FIRST_PLAYER: 0, //TODO: dynamic
+
+	Keyboard: require("./keyboard.js"),
+	Mouse: require("./mouse.js"),
+	Gamepad: require("./gamepad.js"),
+
+	/**
+	 * Called by the SDK to initialize the input system.
+	 */
+	_init: function()
+	{
+		this.Keyboard._init();
+		this.Mouse._init();
+		this.Gamepad._init();
+	},
+
+	/**
+	 * Called by the SDK to destroy the input system.
+	 */
+	_destroy: function()
+	{
+		this.Keyboard._destroy();
+		this.Mouse._destroy();
+		this.Gamepad._destroy();
+	},
+
+	/**
+	 * Returns true if a 'left' control was pressed.
+	 * @returns {Boolean}
+	 */
+	actionMenuLeft: function()
+	{
+		return this.Keyboard.keyPressed(this.Keyboard.LEFT) || this.Keyboard.keyPressed("a")
+			|| this.Gamepad.axisPressed(this.FIRST_PLAYER, this.Gamepad.GA_LEFTSTICK_X) < 0
+			|| this.Gamepad.buttonPressed(this.FIRST_PLAYER, this.Gamepad.GB_DPAD_LEFT);
+	},
+
+	/**
+	 * Returns true if a 'right' control was pressed.
+	 * @returns {Boolean}
+	 */
+	actionMenuRight: function()
+	{
+		return this.Keyboard.keyPressed(this.Keyboard.RIGHT) || this.Keyboard.keyPressed("d")
+			|| this.Gamepad.axisPressed(this.FIRST_PLAYER, this.Gamepad.GA_LEFTSTICK_X) > 0
+			|| this.Gamepad.buttonPressed(this.FIRST_PLAYER, this.Gamepad.GB_DPAD_RIGHT);
+	},
+
+	/**
+	 * Returns true if an 'up' control was pressed.
+	 * @returns {Boolean}
+	 */
+	actionMenuUp: function()
+	{
+		return this.Keyboard.keyPressed(this.Keyboard.UP) || this.Keyboard.keyPressed("w")
+			|| this.Gamepad.axisPressed(this.FIRST_PLAYER, this.Gamepad.GA_LEFTSTICK_Y) < 0
+			|| this.Gamepad.buttonPressed(this.FIRST_PLAYER, this.Gamepad.GB_DPAD_UP);
+	},
+
+	/**
+	 * Returns true if a 'down' control was pressed.
+	 * @returns {Boolean}
+	 */
+	actionMenuDown: function()
+	{
+		return this.Keyboard.keyPressed(this.Keyboard.DOWN) || this.Keyboard.keyPressed("s")
+			|| this.Gamepad.axisPressed(this.FIRST_PLAYER, this.Gamepad.GA_LEFTSTICK_Y) > 0
+			|| this.Gamepad.buttonPressed(this.FIRST_PLAYER, this.Gamepad.GB_DPAD_DOWN);
+	},
+
+	/**
+	 * Returns true if an 'accept' control was pressed.
+	 * @returns {Boolean}
+	 */
+	actionMenuAccept: function()
+	{
+		return this.Keyboard.keyPressed(this.Keyboard.SPACE) || this.Keyboard.keyPressed(this.Keyboard.ENTER)
+			|| this.Gamepad.buttonPressed(this.FIRST_PLAYER, this.Gamepad.GB_A);
+	},
+
+	/**
+	 * Returns true if a 'cancel' control was pressed.
+	 * @returns {Boolean}
+	 */
+	actionMenuCancel: function()
+	{
+		return this.Keyboard.keyPressed(this.Keyboard.ESCAPE)
+			|| this.Gamepad.buttonPressed(this.FIRST_PLAYER, this.Gamepad.GB_B);
+	},
+
+	/**
+	 * Returns true if a 'pause' control was pressed.
+	 * @returns {Boolean}
+	 */
+	actionGamePause: function()
+	{
+		return this.Keyboard.keyPressed(this.Keyboard.ESCAPE)
+			|| this.Gamepad.buttonPressed(this.FIRST_PLAYER, this.Gamepad.GB_START);
+	},
 
 	/**
 	 * Called by the SDK each frame.
 	 */
 	_update: function()
 	{
-		if (navigator && navigator.getGamepads)
-		{
-			//HACK: so much garbage
-			this.oldGamepads = this._cloneGamepadState(this.gamepads);
-			this.gamepads = this._cloneGamepadState(navigator.getGamepads());
-		}
-		else
-		{
-			this.oldGamepads = undefined;
-			this.gamepads = undefined;
-		}
-		
 		this.Keyboard._update();
 		this.Mouse._update();
+		this.Gamepad._update();
 	},
 };
 
-},{"./keyboard.js":7,"./mouse.js":8}],7:[function(require,module,exports){
+},{"./gamepad.js":6,"./keyboard.js":8,"./mouse.js":9}],8:[function(require,module,exports){
 
 module.exports = Keyboard =
 {
@@ -42538,7 +42579,7 @@ module.exports = Keyboard =
 	},
 };
 
-},{}],8:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 
 module.exports = Mouse =
 {
@@ -42708,7 +42749,7 @@ module.exports = Mouse =
 	},
 };
 
-},{}],9:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 Math.sign = Math.sign || function(val)
 {
 	if (val < 0)
@@ -42794,7 +42835,7 @@ Array.prototype.contains = Array.prototype.contains || function contains(object)
 	return false;
 };
 
-},{}],10:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 
 ThreeUtils = require("./index.js")
 
@@ -42842,7 +42883,7 @@ Atlas.prototype.getSpriteHeight = function(key)
 
 module.exports = Atlas;
 
-},{"./index.js":11}],11:[function(require,module,exports){
+},{"./index.js":12}],12:[function(require,module,exports){
 
 THREE = require("three");
 
@@ -43221,4 +43262,4 @@ THREE.Vector3.RightVector = new THREE.Vector3(1, 0, 0);
 THREE.Vector3.UpVector = new THREE.Vector3(0, -1, 0);
 THREE.Vector3.DownVector = new THREE.Vector3(0, 1, 0);
 
-},{"./Atlas.js":10,"three":2}]},{},[1]);
+},{"./Atlas.js":11,"three":2}]},{},[1])

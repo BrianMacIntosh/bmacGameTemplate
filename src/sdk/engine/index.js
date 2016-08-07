@@ -59,10 +59,12 @@ module.exports = bmacSdk =
  */
 bmacSdk.initialize = function()
 {
+	//TODO: use addEventListener instead
 	window.onblur = document.onfocusout = function()
 	{
 		bmacSdk.isFocused = false;
 	};
+	//TODO: use addEventListener instead
 	window.onfocus = document.onfocusin = function()
 	{
 		bmacSdk.isFocused = true;
