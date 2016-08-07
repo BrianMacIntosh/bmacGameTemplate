@@ -1,6 +1,8 @@
 
 bmacSdk = require("./index.js");
 
+//TODO: engine should set up Box2D world and listeners for you
+
 /**
  * An Engine has a scene and a camera and manages game objects that are added to it.
  * @param {String} canvasDivName The name of the HTML element the canvas should be added to.
