@@ -110,7 +110,7 @@ var b2Utils =
 	 * @param {Box2D.b2FixtureDef} fixtureDef A fixture to add to the body.
 	 * @returns {Box2D.b2Body}
 	 */
-	createDynamicBody = function(world, x, y, fixture)
+	createDynamicBody: function(world, x, y, fixture)
 	{
 		this.tempVector2.set_x(x/this.B2_SCALE);
 		this.tempVector2.set_y(y/this.B2_SCALE);
@@ -126,7 +126,7 @@ var b2Utils =
 	 * Returns the contact listener for the game.
 	 * @returns {Box2D.JSContactListener}
 	 */
-	getContactListener = function()
+	getContactListener: function()
 	{
 		if (this.contactListener)
 		{
@@ -191,7 +191,7 @@ var b2Utils =
 	 * Returns the contact filter for the game.
 	 * @returns {Box2D.JSContactFilter}
 	 */
-	getContactFilter = function(shouldCollide)
+	getContactFilter: function(shouldCollide)
 	{
 		if (this.contactFilter)
 		{
@@ -214,7 +214,7 @@ var b2Utils =
 	 * @param {PhysicsLinkedObject} linkedObject
 	 * @returns {Box2D.b2Fixture}
 	 */
-	getOtherObject = function(contact, linkedObject)
+	getOtherObject: function(contact, linkedObject)
 	{
 		if (contact.GetFixtureA().GetBody() == linkedObject.body)
 		{
