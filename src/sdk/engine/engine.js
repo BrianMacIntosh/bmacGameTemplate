@@ -52,11 +52,14 @@ Engine.prototype.removeObject = function(object)
  */
 Engine.prototype._attachDom = function()
 {
-	this.canvasDiv = document.getElementById(this.canvasDivName);
-	this.renderer = new THREE.WebGLRenderer();
-	this.canvasDiv.appendChild(this.renderer.domElement);
-	this.canvasDiv.oncontextmenu = function() { return false; };
-	this.renderer.setClearColor(0x000000, 1);
+	if (!bmacSdk.isHeadless)
+	{
+		this.canvasDiv = document.getElementById(this.canvasDivName);
+		this.renderer = new THREE.WebGLRenderer();
+		this.canvasDiv.appendChild(this.renderer.domElement);
+		this.canvasDiv.oncontextmenu = function() { return false; };
+		this.renderer.setClearColor(0x000000, 1);
+	}
 	
 	//TODO: 2D depth management
 	
@@ -74,9 +77,12 @@ Engine.prototype._attachDom = function()
  */
 Engine.prototype._handleWindowResize = function()
 {
-	this.screenWidth = this.canvasDiv.offsetWidth;
-	this.screenHeight = this.canvasDiv.offsetHeight;
-	this.renderer.setSize(this.screenWidth, this.screenHeight);
+	if (this.canvasDiv) // for node server support
+	{
+		this.screenWidth = this.canvasDiv.offsetWidth;
+		this.screenHeight = this.canvasDiv.offsetHeight;
+		this.renderer.setSize(this.screenWidth, this.screenHeight);
+	}
 	this.mainCamera.left = -this.screenWidth/2;
 	this.mainCamera.right = this.screenWidth/2;
 	this.mainCamera.top = -this.screenHeight/2;
@@ -100,7 +106,10 @@ Engine.prototype._animate = function()
 	}
 	
 	// render
-	this.renderer.render(this.scene, this.mainCamera);
+	if (this.renderer)
+	{
+		this.renderer.render(this.scene, this.mainCamera);
+	}
 };
 
 module.exports = Engine;

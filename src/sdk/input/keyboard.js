@@ -1,6 +1,12 @@
 
 module.exports = Keyboard =
 {
+	/**
+	 * Read-only. Set if 'document' was not found.
+	 * @type {Boolean}
+	 */
+	isHeadless: false,
+
 	//stores current button state
 	keysDown: {},
 	
@@ -49,8 +55,15 @@ module.exports = Keyboard =
 			self.keysReleasedBuffer[e.keyCode] = true;
 		};
 		
-		document.addEventListener("keydown", this._onKeyDown, false);
-		document.addEventListener("keyup", this._onKeyUp, false);
+		if (typeof document !== "undefined")
+		{
+			document.addEventListener("keydown", this._onKeyDown, false);
+			document.addEventListener("keyup", this._onKeyUp, false);
+		}
+		else
+		{
+			this.isHeadless = true;
+		}
 	},
 
 	/**
@@ -58,8 +71,11 @@ module.exports = Keyboard =
 	 */
 	_destroy: function()
 	{
-		document.removeEventListener("keydown", this._onKeyDown, false);
-		document.removeEventListener("keyup", this._onKeyUp, false);
+		if (typeof document !== "undefined")
+		{
+			document.removeEventListener("keydown", this._onKeyDown, false);
+			document.removeEventListener("keyup", this._onKeyUp, false);
+		}
 	},
 
 	/**

@@ -20,6 +20,12 @@ module.exports = bmacSdk =
 	 * @type {Boolean}
 	 */
 	_eatFrame: false,
+
+	/**
+	 * Read-only. Set if window or document was not found.
+	 * @type {Boolean}
+	 */
+	isHeadless: false,
 	
 	/**
 	 * Set to true if the window has focus.
@@ -59,27 +65,31 @@ module.exports = bmacSdk =
  */
 bmacSdk.initialize = function()
 {
-	//TODO: use addEventListener instead
-	window.onblur = document.onfocusout = function()
+	this.isHeadless = typeof window == "undefined" || typeof document == "undefined";
+	if (!this.isHeadless)
 	{
-		bmacSdk.isFocused = false;
-	};
-	//TODO: use addEventListener instead
-	window.onfocus = document.onfocusin = function()
-	{
-		bmacSdk.isFocused = true;
-		bmacSdk._eatFrame = true;
-	};
-	window.addEventListener("resize", function()
-	{
-		if (bmacSdk.domAttached)
+		//TODO: use addEventListener instead
+		window.onblur = document.onfocusout = function()
 		{
-			for (var c = 0; c < bmacSdk.engines.length; c++)
+			bmacSdk.isFocused = false;
+		};
+		//TODO: use addEventListener instead
+		window.onfocus = document.onfocusin = function()
+		{
+			bmacSdk.isFocused = true;
+			bmacSdk._eatFrame = true;
+		};
+		window.addEventListener("resize", function()
+		{
+			if (bmacSdk.domAttached)
 			{
-				bmacSdk.engines[c]._handleWindowResize();
+				for (var c = 0; c < bmacSdk.engines.length; c++)
+				{
+					bmacSdk.engines[c]._handleWindowResize();
+				}
 			}
-		}
-	});
+		});
+	}
 }
 
 /**
@@ -120,7 +130,11 @@ bmacSdk._animate = function()
 	bmacSdk._deltaSec = (Date.now() - bmacSdk._lastFrame) / 1000;
 	bmacSdk._lastFrame = Date.now();
 	
-	requestAnimationFrame(bmacSdk._animate);
+	// node server doesn't have this method and needs to call this manually each frame
+	if (!this.isHeadless)
+	{
+		requestAnimationFrame(bmacSdk._animate);
+	}
 	
 	if (bmacSdk._eatFrame)
 	{

@@ -19,7 +19,7 @@ var b2Utils =
 	AllObjects: [],
 
 	/**
-	 * Temporary vector used for math, to prevent garbage allocation.
+	 * Temporary vector used for math, to prevent garbage allocation. Use only VERY locally.
 	 * @type {Box2D.b2Vec2}
 	 */
 	tempVector2: new Box2D.b2Vec2(),
@@ -89,7 +89,7 @@ var b2Utils =
 	 * @param {Box2D.b2World} world
 	 * @param {Number} x The starting x position of the body in world coordinates.
 	 * @param {Number} y The starting y position of the body in world coordinates.
-	 * @param {Box2D.b2FixtureDef} fixtureDef A fixture to add to the body.
+	 * @param {Box2D.b2FixtureDef} (Optional) fixtureDef A fixture to add to the body.
 	 * @returns {Box2D.b2Body}
 	 */
 	createStaticBody: function(world, x, y, fixtureDef)
@@ -98,7 +98,10 @@ var b2Utils =
 		this.tempVector2.set_y(y/this.B2_SCALE);
 		this.staticBodyDef.set_position(this.tempVector2);
 		var body = world.CreateBody(this.staticBodyDef);
-		body.CreateFixture(fixtureDef);
+		if (fixtureDef)
+		{
+			body.CreateFixture(fixtureDef);
+		}
 		return body;
 	},
 
@@ -110,13 +113,16 @@ var b2Utils =
 	 * @param {Box2D.b2FixtureDef} fixtureDef A fixture to add to the body.
 	 * @returns {Box2D.b2Body}
 	 */
-	createDynamicBody: function(world, x, y, fixture)
+	createDynamicBody: function(world, x, y, fixtureDef)
 	{
 		this.tempVector2.set_x(x/this.B2_SCALE);
 		this.tempVector2.set_y(y/this.B2_SCALE);
 		this.dynamicBodyDef.set_position(this.tempVector2);
 		var body = world.CreateBody(this.dynamicBodyDef);
-		body.CreateFixture(fixture);
+		if (fixtureDef)
+		{
+			body.CreateFixture(fixtureDef);
+		}
 		return body;
 	},
 

@@ -1,4 +1,4 @@
-(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 
 // load the SDK
 bmacSdk = require("./src/sdk/engine");
@@ -41820,6 +41820,8 @@ sampleGame.update = function()
 
 bmacSdk = require("./index.js");
 
+//TODO: engine should set up Box2D world and listeners for you
+
 /**
  * An Engine has a scene and a camera and manages game objects that are added to it.
  * @param {String} canvasDivName The name of the HTML element the canvas should be added to.
@@ -41869,11 +41871,14 @@ Engine.prototype.removeObject = function(object)
  */
 Engine.prototype._attachDom = function()
 {
-	this.canvasDiv = document.getElementById(this.canvasDivName);
-	this.renderer = new THREE.WebGLRenderer();
-	this.canvasDiv.appendChild(this.renderer.domElement);
-	this.canvasDiv.oncontextmenu = function() { return false; };
-	this.renderer.setClearColor(0x000000, 1);
+	if (!bmacSdk.isHeadless)
+	{
+		this.canvasDiv = document.getElementById(this.canvasDivName);
+		this.renderer = new THREE.WebGLRenderer();
+		this.canvasDiv.appendChild(this.renderer.domElement);
+		this.canvasDiv.oncontextmenu = function() { return false; };
+		this.renderer.setClearColor(0x000000, 1);
+	}
 	
 	//TODO: 2D depth management
 	
@@ -41891,9 +41896,12 @@ Engine.prototype._attachDom = function()
  */
 Engine.prototype._handleWindowResize = function()
 {
-	this.screenWidth = this.canvasDiv.offsetWidth;
-	this.screenHeight = this.canvasDiv.offsetHeight;
-	this.renderer.setSize(this.screenWidth, this.screenHeight);
+	if (this.canvasDiv) // for node server support
+	{
+		this.screenWidth = this.canvasDiv.offsetWidth;
+		this.screenHeight = this.canvasDiv.offsetHeight;
+		this.renderer.setSize(this.screenWidth, this.screenHeight);
+	}
 	this.mainCamera.left = -this.screenWidth/2;
 	this.mainCamera.right = this.screenWidth/2;
 	this.mainCamera.top = -this.screenHeight/2;
@@ -41917,7 +41925,10 @@ Engine.prototype._animate = function()
 	}
 	
 	// render
-	this.renderer.render(this.scene, this.mainCamera);
+	if (this.renderer)
+	{
+		this.renderer.render(this.scene, this.mainCamera);
+	}
 };
 
 module.exports = Engine;
@@ -41945,6 +41956,12 @@ module.exports = bmacSdk =
 	 * @type {Boolean}
 	 */
 	_eatFrame: false,
+
+	/**
+	 * Read-only. Set if window or document was not found.
+	 * @type {Boolean}
+	 */
+	isHeadless: false,
 	
 	/**
 	 * Set to true if the window has focus.
@@ -41984,27 +42001,31 @@ module.exports = bmacSdk =
  */
 bmacSdk.initialize = function()
 {
-	//TODO: use addEventListener instead
-	window.onblur = document.onfocusout = function()
+	this.isHeadless = typeof window == "undefined" || typeof document == "undefined";
+	if (!this.isHeadless)
 	{
-		bmacSdk.isFocused = false;
-	};
-	//TODO: use addEventListener instead
-	window.onfocus = document.onfocusin = function()
-	{
-		bmacSdk.isFocused = true;
-		bmacSdk._eatFrame = true;
-	};
-	window.addEventListener("resize", function()
-	{
-		if (bmacSdk.domAttached)
+		//TODO: use addEventListener instead
+		window.onblur = document.onfocusout = function()
 		{
-			for (var c = 0; c < bmacSdk.engines.length; c++)
+			bmacSdk.isFocused = false;
+		};
+		//TODO: use addEventListener instead
+		window.onfocus = document.onfocusin = function()
+		{
+			bmacSdk.isFocused = true;
+			bmacSdk._eatFrame = true;
+		};
+		window.addEventListener("resize", function()
+		{
+			if (bmacSdk.domAttached)
 			{
-				bmacSdk.engines[c]._handleWindowResize();
+				for (var c = 0; c < bmacSdk.engines.length; c++)
+				{
+					bmacSdk.engines[c]._handleWindowResize();
+				}
 			}
-		}
-	});
+		});
+	}
 }
 
 /**
@@ -42045,7 +42066,11 @@ bmacSdk._animate = function()
 	bmacSdk._deltaSec = (Date.now() - bmacSdk._lastFrame) / 1000;
 	bmacSdk._lastFrame = Date.now();
 	
-	requestAnimationFrame(bmacSdk._animate);
+	// node server doesn't have this method and needs to call this manually each frame
+	if (!this.isHeadless)
+	{
+		requestAnimationFrame(bmacSdk._animate);
+	}
 	
 	if (bmacSdk._eatFrame)
 	{
@@ -42070,6 +42095,12 @@ bmacSdk._animate = function()
 
 module.exports = Gamepad =
 {
+	/**
+	 * Read-only. Set if gamepad data was not found.
+	 * @type {Boolean}
+	 */
+	isHeadless: false,
+
 	STICK_THRESHOLD: 0.5,
 	DEAD_ZONE: 0.3,
 
@@ -42103,7 +42134,7 @@ module.exports = Gamepad =
 
 	_update: function()
 	{
-		if (navigator && navigator.getGamepads)
+		if (typeof navigator !== "undefined" && navigator.getGamepads)
 		{
 			//HACK: so much garbage
 			this.oldGamepads = this._cloneGamepadState(this.gamepads);
@@ -42113,6 +42144,7 @@ module.exports = Gamepad =
 		{
 			this.oldGamepads = undefined;
 			this.gamepads = undefined;
+			this.isHeadless = true;
 		}
 	},
 
@@ -42427,6 +42459,12 @@ module.exports = Input =
 
 module.exports = Keyboard =
 {
+	/**
+	 * Read-only. Set if 'document' was not found.
+	 * @type {Boolean}
+	 */
+	isHeadless: false,
+
 	//stores current button state
 	keysDown: {},
 	
@@ -42475,8 +42513,15 @@ module.exports = Keyboard =
 			self.keysReleasedBuffer[e.keyCode] = true;
 		};
 		
-		document.addEventListener("keydown", this._onKeyDown, false);
-		document.addEventListener("keyup", this._onKeyUp, false);
+		if (typeof document !== "undefined")
+		{
+			document.addEventListener("keydown", this._onKeyDown, false);
+			document.addEventListener("keyup", this._onKeyUp, false);
+		}
+		else
+		{
+			this.isHeadless = true;
+		}
 	},
 
 	/**
@@ -42484,8 +42529,11 @@ module.exports = Keyboard =
 	 */
 	_destroy: function()
 	{
-		document.removeEventListener("keydown", this._onKeyDown, false);
-		document.removeEventListener("keyup", this._onKeyUp, false);
+		if (typeof document !== "undefined")
+		{
+			document.removeEventListener("keydown", this._onKeyDown, false);
+			document.removeEventListener("keyup", this._onKeyUp, false);
+		}
 	},
 
 	/**
@@ -42583,6 +42631,12 @@ module.exports = Keyboard =
 
 module.exports = Mouse =
 {
+	/**
+	 * Read-only. Set if 'document' was not found.
+	 * @type {Boolean}
+	 */
+	isHeadless: false,
+
 	mousePos: { x: 0, y: 0 },
 	
 	//stores current button state
@@ -42630,10 +42684,17 @@ module.exports = Mouse =
 			self.mouseReleasedBuffer[e.which || e.keyCode] = true;
 		}
 		
-		document.addEventListener("mousemove", this._onMouseMove, false);
-		document.addEventListener("dragover", this._onDragOver, false);
-		document.addEventListener("mousedown", this._onMouseDown, false);
-		document.addEventListener("mouseup", this._onMouseUp, false);
+		if (typeof document !== "undefined")
+		{
+			document.addEventListener("mousemove", this._onMouseMove, false);
+			document.addEventListener("dragover", this._onDragOver, false);
+			document.addEventListener("mousedown", this._onMouseDown, false);
+			document.addEventListener("mouseup", this._onMouseUp, false);
+		}
+		else
+		{
+			this.isHeadless = true;
+		}
 	},
 
 	/**
@@ -42641,10 +42702,13 @@ module.exports = Mouse =
 	 */
 	_destroy: function()
 	{
-		document.removeEventListener("mousemove", this._onMouseMove, false);
-		document.removeEventListener("dragover", this._onDragOver, false);
-		document.removeEventListener("mousedown", this._onMouseDown, false);
-		document.removeEventListener("mouseup", this._onMouseUp, false);
+		if (typeof document !== "undefined")
+		{
+			document.removeEventListener("mousemove", this._onMouseMove, false);
+			document.removeEventListener("dragover", this._onDragOver, false);
+			document.removeEventListener("mousedown", this._onMouseDown, false);
+			document.removeEventListener("mouseup", this._onMouseUp, false);
+		}
 	},
 
 	/**
@@ -43262,4 +43326,4 @@ THREE.Vector3.RightVector = new THREE.Vector3(1, 0, 0);
 THREE.Vector3.UpVector = new THREE.Vector3(0, -1, 0);
 THREE.Vector3.DownVector = new THREE.Vector3(0, 1, 0);
 
-},{"./Atlas.js":11,"three":2}]},{},[1])
+},{"./Atlas.js":11,"three":2}]},{},[1]);

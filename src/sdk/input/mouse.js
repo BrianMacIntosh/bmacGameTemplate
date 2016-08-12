@@ -1,6 +1,12 @@
 
 module.exports = Mouse =
 {
+	/**
+	 * Read-only. Set if 'document' was not found.
+	 * @type {Boolean}
+	 */
+	isHeadless: false,
+
 	mousePos: { x: 0, y: 0 },
 	
 	//stores current button state
@@ -48,10 +54,17 @@ module.exports = Mouse =
 			self.mouseReleasedBuffer[e.which || e.keyCode] = true;
 		}
 		
-		document.addEventListener("mousemove", this._onMouseMove, false);
-		document.addEventListener("dragover", this._onDragOver, false);
-		document.addEventListener("mousedown", this._onMouseDown, false);
-		document.addEventListener("mouseup", this._onMouseUp, false);
+		if (typeof document !== "undefined")
+		{
+			document.addEventListener("mousemove", this._onMouseMove, false);
+			document.addEventListener("dragover", this._onDragOver, false);
+			document.addEventListener("mousedown", this._onMouseDown, false);
+			document.addEventListener("mouseup", this._onMouseUp, false);
+		}
+		else
+		{
+			this.isHeadless = true;
+		}
 	},
 
 	/**
@@ -59,10 +72,13 @@ module.exports = Mouse =
 	 */
 	_destroy: function()
 	{
-		document.removeEventListener("mousemove", this._onMouseMove, false);
-		document.removeEventListener("dragover", this._onDragOver, false);
-		document.removeEventListener("mousedown", this._onMouseDown, false);
-		document.removeEventListener("mouseup", this._onMouseUp, false);
+		if (typeof document !== "undefined")
+		{
+			document.removeEventListener("mousemove", this._onMouseMove, false);
+			document.removeEventListener("dragover", this._onDragOver, false);
+			document.removeEventListener("mousedown", this._onMouseDown, false);
+			document.removeEventListener("mouseup", this._onMouseUp, false);
+		}
 	},
 
 	/**

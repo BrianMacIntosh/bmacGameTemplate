@@ -1,6 +1,12 @@
 
 module.exports = Gamepad =
 {
+	/**
+	 * Read-only. Set if gamepad data was not found.
+	 * @type {Boolean}
+	 */
+	isHeadless: false,
+
 	STICK_THRESHOLD: 0.5,
 	DEAD_ZONE: 0.3,
 
@@ -34,7 +40,7 @@ module.exports = Gamepad =
 
 	_update: function()
 	{
-		if (navigator && navigator.getGamepads)
+		if (typeof navigator !== "undefined" && navigator.getGamepads)
 		{
 			//HACK: so much garbage
 			this.oldGamepads = this._cloneGamepadState(this.gamepads);
@@ -44,6 +50,7 @@ module.exports = Gamepad =
 		{
 			this.oldGamepads = undefined;
 			this.gamepads = undefined;
+			this.isHeadless = true;
 		}
 	},
 
