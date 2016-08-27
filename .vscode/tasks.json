@@ -1,0 +1,13 @@
+{
+	"version": "0.1.0",
+	"command": "\"bin\\build_debug.bat\"",
+	"isShellCommand": true,
+	"suppressTaskName": true,
+	"tasks": [
+		{
+			"taskName": "Build Client (debug)",
+			"echoCommand": true,
+			"isBuildCommand": true
+		}
+	]
+}

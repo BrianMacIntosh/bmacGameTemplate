@@ -1,0 +1,25 @@
+{
+	"version": "0.1.0",
+	"configurations": [
+	{
+		"name": "Run Client (Chrome)",
+		"type": "chrome",
+		"request": "launch",
+		"file": "${workspaceRoot}/index.html",
+		"preLaunchTask": "Build Client (debug)"
+	},
+	{
+		"name": "Attach Client (Chrome)",
+		"type": "chrome",
+		"request": "attach",
+		"port": 9222
+	},
+	{
+		"name": "Run Server (node)",
+		"type": "node",
+		"request": "launch",
+		"program": "${workspaceRoot}/server.js",
+		"cwd": "${workspaceRoot}"
+	}
+	]
+}
