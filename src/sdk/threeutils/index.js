@@ -1,6 +1,8 @@
 
 THREE = require("three");
 
+AtlasData = require("../../data/atlases.js");
+
 /** @namespace */
 var ThreeUtils = 
 {
@@ -147,6 +149,28 @@ var ThreeUtils =
 	},
 
 	/**
+	 * Loads the atlas represented by the specified key or returns a cached version.
+	 * @param key {String}
+	 * @returns {Atlas}
+	 */
+	loadAtlas: function(key)
+	{
+		var atlasData = AtlasData[key];
+		if (atlasData)
+		{
+			if (!atlasData.atlas)
+			{
+				atlasData.atlas = new this.Atlas(atlasData);
+			}
+			return atlasData.atlas;
+		}
+		else
+		{
+			console.error("Tried to load unknown atlas '" + key + "'.");
+		}
+	},
+
+	/**
 	 * Sets an HTML div to display an image in an atlas.
 	 * @param {Element} element The element to configure.
 	 * @param {Atlas} atlas The atlas to us.
@@ -179,17 +203,17 @@ var ThreeUtils =
 	 */
 	makeAtlasMesh: function(atlas, key, dynamic)
 	{
-		if (atlas.data[key] === undefined)
+		if (atlas.sprites[key] === undefined)
 		{
 			console.error("Atlas '"+atlas.url+"' has no key '"+key+"'.");
 			return null;
 		}
-		if (!atlas.data[key].geo)
+		if (!atlas.sprites[key].geo)
 		{
-			atlas.data[key].geo = this.makeSpriteGeo(atlas.data[key][2],atlas.data[key][3]);
-			this._setAtlasUVs(atlas.data[key].geo,atlas,key);
+			atlas.sprites[key].geo = this.makeSpriteGeo(atlas.sprites[key][2],atlas.sprites[key][3]);
+			this._setAtlasUVs(atlas.sprites[key].geo,atlas,key);
 		}
-		var geo = atlas.data[key].geo
+		var geo = atlas.sprites[key].geo
 		if (dynamic)
 		{
 			geo = geo.clone();
@@ -210,17 +234,17 @@ var ThreeUtils =
 			console.error("Geometry is not atlased.");
 			return;
 		}
-		if (atlas.data[key] === undefined)
+		if (atlas.sprites[key] === undefined)
 		{
 			console.error("Atlas '"+atlas.url+"' has not key '"+key+"'");
 			return;
 		}
 		
 		uvs = geo.faceVertexUvs[0];
-		var l = atlas.data[key][0]/atlas.width;
-		var b = (1-atlas.data[key][1]/atlas.height);
-		var r = l+atlas.data[key][2]/atlas.width;
-		var t = b-atlas.data[key][3]/atlas.height;
+		var l = atlas.sprites[key][0]/atlas.width;
+		var b = (1-atlas.sprites[key][1]/atlas.height);
+		var r = l+atlas.sprites[key][2]/atlas.width;
+		var t = b-atlas.sprites[key][3]/atlas.height;
 		if (geo.atlas_flipx){var temp=l;l=r;r=temp;}
 		if (geo.atlas_flipy){var temp=t;t=b;b=temp;}
 		uvs[0][0].set(l,b);
@@ -251,15 +275,15 @@ var ThreeUtils =
 			console.error("Geometry is not atlased.");
 			return;
 		}
-		if (atlas.data[key] === undefined)
+		if (atlas.sprites[key] === undefined)
 		{
 			console.error("Atlas '"+atlas.url+"' has not key '"+key+"'");
 			return;
 		}
 		this._setAtlasUVs(geometry,atlas,key,flipX,flipY);
 		
-		var w = atlas.data[key][2]/2;
-		var h = atlas.data[key][3]/2;
+		var w = atlas.sprites[key][2]/2;
+		var h = atlas.sprites[key][3]/2;
 		verts = geometry.vertices;
 		verts[0].set(-w,-h,0);
 		verts[1].set(w,-h,0);

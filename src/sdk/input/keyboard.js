@@ -167,4 +167,17 @@ module.exports = Keyboard =
 	{
 		return !this.keysDown[this._translateKey(code)];
 	},
+
+	/**
+	 * Returns the number key pressed this frame, or -1 if none.
+	 * @returns {Number}
+	 */
+	getNumberPressed: function()
+	{
+		for (var i = 48; i <= 57; i++)
+		{
+			if (this.keyPressed(i)) return i - 48;
+		}
+		return -1;
+	}
 };

@@ -7,15 +7,15 @@ ThreeUtils = require("./index.js")
  * @param {string} url The url of the atlas image.
  * @param {Number} width The pixel width of the image. //TODO: don't require this
  * @param {Number} height The pixel height of the image. //TODO: don't require this
- * @param {Object} data The atlas key data.
+ * @param {Object} sprites The atlas key data.
  * @param {Boolean} suppressTextureLoad If set, does not automatically load the texture.
  */
-Atlas = function(url, width, height, data, suppressTextureLoad)
+Atlas = function(url, width, height, sprites, suppressTextureLoad)
 {
 	this.url = url;
 	this.width = width;
 	this.height = height;
-	this.data = data;
+	this.sprites = sprites;
 	if (!suppressTextureLoad)
 	{
 		this.texture = ThreeUtils.loadTexture(url);
@@ -30,7 +30,7 @@ Atlas = function(url, width, height, data, suppressTextureLoad)
  */
 Atlas.prototype.getSpriteWidth = function(key)
 {
-	return this.data[key][2];
+	return this.sprites[key][2];
 }
 
 /**
@@ -40,7 +40,7 @@ Atlas.prototype.getSpriteWidth = function(key)
  */
 Atlas.prototype.getSpriteHeight = function(key)
 {
-	return this.data[key][3];
+	return this.sprites[key][3];
 }
 
 module.exports = Atlas;
