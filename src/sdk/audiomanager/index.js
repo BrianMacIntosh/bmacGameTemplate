@@ -95,24 +95,49 @@ AudioManager =
 		{
 			//Make a new clip
 			var clip = new Audio(url);
+			clip.relativeSrc = url;
 			clip.volume = vol || 1.0;
-			clip.addEventListener("ended", this._soundEndCallback(clip, url));
+			clip.addEventListener("ended", this._soundEndCallback(clip));
 		}
 		clip.play();
 		return clip;
 	},
 
 	/**
+ 	 * Stops and pools the specified clip.
+ 	 * @param {Audio} clip
+ 	 */
+ 	stop: function(clip)
+ 	{
+ 		clip.pause();
+ 		clip.currentTime = 0;
+ 		this._addToPool(clip);
+	},
+
+	/**
 	 * @callback
 	 */
-	_soundEndCallback: function(clip, url)
+	_soundEndCallback: function(clip)
 	{
 		return function(event)
 		{
-			if (!AudioManager.pool[url])
-			{
-				AudioManager.pool[url] = [];
-			}
+			AudioManager._addToPool(clip);
+		}
+	},
+
+	/**
+	 * Returns the specified clip to the pool.
+	 * @param {Audio} clip
+	 */
+	_addToPool: function(clip)
+	{
+		var url = clip.relativeSrc;
+		if (!AudioManager.pool[url])
+		{
+			AudioManager.pool[url] = [];
+		}
+		if (!AudioManager.pool[url].contains(clip))
+		{
 			AudioManager.pool[url].push(clip);
 		}
 	},
