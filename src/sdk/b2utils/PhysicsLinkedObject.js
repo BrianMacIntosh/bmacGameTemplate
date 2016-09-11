@@ -61,6 +61,7 @@ PhysicsLinkedObject.prototype.update = function()
 
 /**
  * Called by box2d when this object starts touching another.
+ * You cannot create or destroy bodies in here.
  * @param {Box2D.b2Contact} contact
  * @param {Box2D.b2Fixture} otherFixture
  */
@@ -71,6 +72,7 @@ PhysicsLinkedObject.prototype.onBeginContact = function(contact, otherFixture)
 
 /**
  * Called by box2d when this object stops touching another.
+ * You cannot create or destroy bodies in here.
  * @param {Box2D.b2Contact} contact
  * @param {Box2D.b2Fixture} otherFixture
  */
@@ -82,6 +84,7 @@ PhysicsLinkedObject.prototype.onEndContact = function(contact, otherFixture)
 /**
  * Called by box2d each frame this body is touching another body, before the response is calculated.
  * The response can be disabled here.
+ * You cannot create or destroy bodies in here.
  * @param {Box2D.b2Contact} contact
  * @param {Box2D.b2Manifold} oldManifold
  * @param {Box2D.b2Fixture} otherFixture
@@ -93,6 +96,7 @@ PhysicsLinkedObject.prototype.onPreSolve = function(contact, oldManifold, otherF
 
 /**
  * Called by box2d each frame this body is touching another body, after the response is calculated.
+ * You cannot create or destroy bodies in here.
  * @param {Box2D.b2Contact} contact
  * @param {Box2D.b2Impulse} impulse
  * @param {Box2D.b2Fixture} otherFixture

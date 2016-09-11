@@ -10,10 +10,15 @@ var ThreeUtils =
 	
 	textureLoader: new THREE.TextureLoader(),
 
-	// if set, all calls return dummy objects instead of real visual objects
+	/**
+	 * If set, all calls return dummy objects instead of real visual objects.
+	 * @returns {Boolean}
+	 */
 	serverMode: false,
 
 	Atlas: require("./Atlas.js"),
+
+	b2Debugger: require("./b2debugger.js"),
 
 	/**
 	 * Creates a THREE.Mesh with a unique material.

@@ -12,7 +12,7 @@ GameEngine.addObject(require("./src/game/sample.js"));
 
 // that's it!
 
-},{"./src/game/sample.js":4,"./src/sdk/engine":6}],2:[function(require,module,exports){
+},{"./src/game/sample.js":4,"./src/sdk/engine":8}],2:[function(require,module,exports){
 // File:src/Three.js
 
 /**
@@ -41838,7 +41838,377 @@ sampleGame.update = function()
 	}
 };
 
-},{"../sdk/input":8,"../sdk/threeutils":13}],5:[function(require,module,exports){
+},{"../sdk/input":10,"../sdk/threeutils":16}],5:[function(require,module,exports){
+
+b2Utils = require("./index.js");
+
+/**
+ * Base class for an object that has three.js visuals and a Box2D body.
+ * Visual elements should be parented to 'this.transform'. The position of
+ * 'this.transform' is automatically updated to match the body.
+ * @param {Box2D.b2Body} The object's body.
+ */
+var PhysicsLinkedObject = function(body)
+{
+	this.transform = new THREE.Object3D();
+
+	b2Utils.AllObjects.push(this);
+	
+	if (body)
+	{
+		this.body = body;
+	}
+}
+
+module.exports = PhysicsLinkedObject;
+
+/**
+ * Destroys this object.
+ */
+PhysicsLinkedObject.prototype.destroy = function()
+{
+	if (this.transform && this.transform.parent)
+	{
+		this.transform.parent.remove(this.transform);
+		delete this.transform;
+	}
+
+	var index = b2Utils.AllObjects.indexOf(this);
+	if (index >= 0)
+	{
+		b2Utils.AllObjects.splice(index, 1);
+	}
+
+	if (this.body)
+	{
+		this.body.GetWorld().DestroyBody(this.body);
+		this.body = undefined;
+	}
+}
+
+/**
+ * Updates this object once per frame.
+ */
+PhysicsLinkedObject.prototype.update = function()
+{
+	if (this.body)
+	{
+		var physicsPos = this.body.GetPosition();
+		this.transform.position.set(
+			physicsPos.get_x()*b2Utils.B2_SCALE, physicsPos.get_y()*b2Utils.B2_SCALE, this.transform.position.z);
+		this.transform.rotation.z = this.body.GetAngle();
+	}
+}
+
+/**
+ * Called by box2d when this object starts touching another.
+ * You cannot create or destroy bodies in here.
+ * @param {Box2D.b2Contact} contact
+ * @param {Box2D.b2Fixture} otherFixture
+ */
+PhysicsLinkedObject.prototype.onBeginContact = function(contact, otherFixture)
+{
+
+}
+
+/**
+ * Called by box2d when this object stops touching another.
+ * You cannot create or destroy bodies in here.
+ * @param {Box2D.b2Contact} contact
+ * @param {Box2D.b2Fixture} otherFixture
+ */
+PhysicsLinkedObject.prototype.onEndContact = function(contact, otherFixture)
+{
+
+}
+
+/**
+ * Called by box2d each frame this body is touching another body, before the response is calculated.
+ * The response can be disabled here.
+ * You cannot create or destroy bodies in here.
+ * @param {Box2D.b2Contact} contact
+ * @param {Box2D.b2Manifold} oldManifold
+ * @param {Box2D.b2Fixture} otherFixture
+ */
+PhysicsLinkedObject.prototype.onPreSolve = function(contact, oldManifold, otherFixture)
+{
+
+}
+
+/**
+ * Called by box2d each frame this body is touching another body, after the response is calculated.
+ * You cannot create or destroy bodies in here.
+ * @param {Box2D.b2Contact} contact
+ * @param {Box2D.b2Impulse} impulse
+ * @param {Box2D.b2Fixture} otherFixture
+ */
+PhysicsLinkedObject.prototype.onPostSolve = function(contact, impulse, otherFixture)
+{
+
+}
+
+},{"./index.js":6}],6:[function(require,module,exports){
+
+/**
+ * @fileOverview Contains utility functions for interacting with Box2D. 
+ */
+
+THREE = require("three");
+
+/**
+ * @namespace
+ */
+var b2Utils =
+{
+	B2_SCALE: 50,
+
+	/**
+	 * List of all PhysicsLinkedObject that exist.
+	 * @type {Array}
+	 */
+	AllObjects: [],
+
+	/**
+	 * Temporary vector used for math, to prevent garbage allocation. Use only VERY locally.
+	 * @type {Box2D.b2Vec2}
+	 */
+	tempVector2: new Box2D.b2Vec2(),
+
+	/**
+	 * Creates an edge shape.
+	 * @param {Number} x1 First x coordinate in world units.
+	 * @param {Number} y1 First y coordinate in world units.
+	 * @param {Number} x2 Second x coordinate in world units.
+	 * @param {Number} y2 Second y coordinate in world units.
+	 * @returns {Box2D.b2Shape}
+	 */
+	createEdgeShape: function(x1, y1, x2, y2)
+	{
+		var shape = new Box2D.b2EdgeShape();
+		shape.Set(
+			new Box2D.b2Vec2(x1/this.B2_SCALE, y1/this.B2_SCALE),
+			new Box2D.b2Vec2(x2/this.B2_SCALE, y2/this.B2_SCALE));
+		return shape;
+	},
+
+	/**
+	 * Creates a rectangle shape.
+	 * @param {Number} w The width of the rectangle in world units.
+	 * @param {Number} h The height of the rectangle in world units.
+	 * @returns {Box2D.b2Shape}
+	 */
+	createRectShape: function(w, h)
+	{
+		var shape = new Box2D.b2PolygonShape();
+		shape.SetAsBox(0.5 * w/this.B2_SCALE, 0.5 * h/this.B2_SCALE);
+		return shape;
+	},
+
+	/**
+	 * Creates a circle shape.
+	 * @param {Number} radius The radius of the circle in world units.
+	 * @returns {Box2D.b2Shape}
+	 */
+	createCircleShape: function(radius)
+	{
+		var shape = new Box2D.b2CircleShape();
+		shape.set_m_radius(radius/this.B2_SCALE);
+		return shape;
+	},
+
+	/**
+	 * Creates a definition that can be used to add fixtures to bodies.
+	 * @param {Box2D.b2Shape} shape
+	 * @param {Number} density
+	 * @param {Number} friction
+	 * @param {Number} restitution
+	 * @returns {Box2D.b2FixtureDef}
+	 */
+	createFixtureDef: function(shape, density, friction, restitution)
+	{
+		var def = new Box2D.b2FixtureDef();
+		def.set_shape(shape);
+		def.set_density(density);
+		def.set_friction(friction);
+		def.set_restitution(restitution);
+		return def;
+	},
+
+	/**
+	 * Creates a static body.
+	 * @param {Box2D.b2World} world
+	 * @param {Number} x The starting x position of the body in world coordinates.
+	 * @param {Number} y The starting y position of the body in world coordinates.
+	 * @param {Box2D.b2FixtureDef} fixtureDef (Optional) fixtureDef A fixture to add to the body.
+	 * @param {Box2D.b2BodyDef} bodyDef (Optional) definition to use for the body
+	 * @returns {Box2D.b2Body}
+	 */
+	createStaticBody: function(world, x, y, fixtureDef, bodyDef)
+	{
+		if (!bodyDef) bodyDef = this.staticBodyDef;
+		this.tempVector2.set_x(x/this.B2_SCALE);
+		this.tempVector2.set_y(y/this.B2_SCALE);
+		bodyDef.set_position(this.tempVector2);
+		var body = world.CreateBody(bodyDef);
+		if (fixtureDef)
+		{
+			body.CreateFixture(fixtureDef);
+		}
+		return body;
+	},
+
+	/**
+	 * Creates a dynamic body.
+	 * @param {Box2D.b2World} world
+	 * @param {Number} x The starting x position of the body in world coordinates.
+	 * @param {Number} y The starting y position of the body in world coordinates.
+	 * @param {Box2D.b2FixtureDef} fixtureDef (Optional) A fixture to add to the body.
+	 * @param {Box2D.b2BodyDef} bodyDef (Optional) definition to use for the body
+	 * @returns {Box2D.b2Body}
+	 */
+	createDynamicBody: function(world, x, y, fixtureDef, bodyDef)
+	{
+		if (!bodyDef) bodyDef = this.dynamicBodyDef;
+		this.tempVector2.set_x(x/this.B2_SCALE);
+		this.tempVector2.set_y(y/this.B2_SCALE);
+		bodyDef.set_position(this.tempVector2);
+		var body = world.CreateBody(bodyDef);
+		if (fixtureDef)
+		{
+			body.CreateFixture(fixtureDef);
+		}
+		return body;
+	},
+
+	//TODO: Improve the API for contact filters and contact listeners
+
+	/**
+	 * Returns the contact listener for the game.
+	 * @returns {Box2D.JSContactListener}
+	 */
+	getContactListener: function()
+	{
+		if (this.contactListener)
+		{
+			return this.contactListener;
+		}
+
+		this.contactListener = new Box2D.JSContactListener();
+		this.contactListener.BeginContact = function(contact)
+		{
+			contact = Box2D.wrapPointer(contact, Box2D.b2Contact);
+			for (var i = 0; i < b2Utils.AllObjects.length; i++)
+			{
+				var otherFixture = b2Utils.getOtherObject(contact, b2Utils.AllObjects[i]);
+				if (otherFixture)
+				{
+					b2Utils.AllObjects[i].onBeginContact(contact, otherFixture);
+				}
+			}
+		}
+		this.contactListener.EndContact = function(contact)
+		{
+			contact = Box2D.wrapPointer(contact, Box2D.b2Contact);
+			for (var i = 0; i < b2Utils.AllObjects.length; i++)
+			{
+				var otherFixture = b2Utils.getOtherObject(contact, b2Utils.AllObjects[i]);
+				if (otherFixture)
+				{
+					b2Utils.AllObjects[i].onEndContact(contact, otherFixture);
+				}
+			}
+		}
+		this.contactListener.PreSolve = function(contact, oldManifold)
+		{
+			contact = Box2D.wrapPointer(contact, Box2D.b2Contact);
+			oldManifold = Box2D.wrapPointer(oldManifold, Box2D.b2Manifold); //TODO: check me
+			for (var i = 0; i < b2Utils.AllObjects.length; i++)
+			{
+				var otherFixture = b2Utils.getOtherObject(contact, b2Utils.AllObjects[i]);
+				if (otherFixture)
+				{
+					b2Utils.AllObjects[i].onPreSolve(contact, oldManifold, otherFixture);
+				}
+			}
+		}
+		this.contactListener.PostSolve = function(contact, impulse)
+		{
+			contact = Box2D.wrapPointer(contact, Box2D.b2Contact);
+			impulse = Box2D.wrapPointer(impulse, Box2D.b2ContactImpulse); //TODO: check me
+			for (var i = 0; i < b2Utils.AllObjects.length; i++)
+			{
+				var otherFixture = b2Utils.getOtherObject(contact, b2Utils.AllObjects[i]);
+				if (otherFixture)
+				{
+					b2Utils.AllObjects[i].onPostSolve(contact, impulse, otherFixture);
+				}
+			}
+		}
+		return this.contactListener;
+	},
+
+	/**
+	 * Returns the contact filter for the game.
+	 * @returns {Box2D.JSContactFilter}
+	 */
+	getContactFilter: function(shouldCollide)
+	{
+		if (this.contactFilter)
+		{
+			return this.contactFilter;
+		}
+
+		this.contactFilter = new Box2D.JSContactFilter();
+		this.contactFilter.ShouldCollide = function(fixtureA, fixtureB)
+		{
+			fixtureA = Box2D.wrapPointer(fixtureA, Box2D.b2Fixture);
+			fixtureB = Box2D.wrapPointer(fixtureB, Box2D.b2Fixture);
+			return shouldCollide(fixtureA, fixtureB);
+		}
+		return this.contactFilter;
+	},
+
+	/**
+	 * If the specified object is involved in the contact, returns the other fixture involved.
+	 * @param {Box2D.b2Contact} contact
+	 * @param {PhysicsLinkedObject} linkedObject
+	 * @returns {Box2D.b2Fixture}
+	 */
+	getOtherObject: function(contact, linkedObject)
+	{
+		if (contact.GetFixtureA().GetBody() == linkedObject.body)
+		{
+			return contact.GetFixtureB();
+		}
+		else if (contact.GetFixtureB().GetBody() == linkedObject.body)
+		{
+			return contact.GetFixtureA();
+		}
+		else
+		{
+			return undefined;
+		}
+	},
+}
+
+module.exports = b2Utils;
+
+b2Utils.PhysicsLinkedObject = require("./PhysicsLinkedObject.js");
+
+b2Utils.filter_all = new Box2D.b2Filter();
+b2Utils.filter_all.set_maskBits(0xFFFF);
+b2Utils.filter_all.set_categoryBits(0xFFFF);
+
+b2Utils.filter_none = new Box2D.b2Filter();
+b2Utils.filter_none.set_maskBits(0);
+b2Utils.filter_none.set_categoryBits(0);
+
+b2Utils.staticBodyDef = new Box2D.b2BodyDef();
+
+b2Utils.dynamicBodyDef = new Box2D.b2BodyDef();
+b2Utils.dynamicBodyDef.set_type(Box2D.b2_dynamicBody);
+
+},{"./PhysicsLinkedObject.js":5,"three":2}],7:[function(require,module,exports){
 
 bmacSdk = require("./index.js");
 
@@ -41955,7 +42325,7 @@ Engine.prototype._animate = function()
 
 module.exports = Engine;
 
-},{"./index.js":6}],6:[function(require,module,exports){
+},{"./index.js":8}],8:[function(require,module,exports){
 
 THREE = require("three");
 
@@ -42113,7 +42483,7 @@ bmacSdk._animate = function()
 	}
 };
 
-},{"../input":8,"../polyfills":11,"./engine.js":5,"three":2}],7:[function(require,module,exports){
+},{"../input":10,"../polyfills":13,"./engine.js":7,"three":2}],9:[function(require,module,exports){
 
 module.exports = Gamepad =
 {
@@ -42362,7 +42732,7 @@ module.exports = Gamepad =
 		return target;
 	},
 }
-},{}],8:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 
 module.exports = Input = 
 {
@@ -42477,7 +42847,7 @@ module.exports = Input =
 	},
 };
 
-},{"./gamepad.js":7,"./keyboard.js":9,"./mouse.js":10}],9:[function(require,module,exports){
+},{"./gamepad.js":9,"./keyboard.js":11,"./mouse.js":12}],11:[function(require,module,exports){
 
 module.exports = Keyboard =
 {
@@ -42662,7 +43032,7 @@ module.exports = Keyboard =
 	}
 };
 
-},{}],10:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 
 module.exports = Mouse =
 {
@@ -42848,7 +43218,7 @@ module.exports = Mouse =
 	},
 };
 
-},{}],11:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 Math.sign = Math.sign || function(val)
 {
 	if (val < 0)
@@ -42934,7 +43304,43 @@ Array.prototype.contains = Array.prototype.contains || function contains(object)
 	return false;
 };
 
-},{}],12:[function(require,module,exports){
+//http://stackoverflow.com/questions/1248302/javascript-object-size
+Object.getRoughSize = function(obj)
+{
+	var objectList = [];
+	var stack = [obj];
+	var bytes = 0;
+
+	while (stack.length)
+	{
+		var value = stack.pop();
+
+		if (typeof value === 'boolean')
+		{
+			bytes += 4;
+		}
+		else if (typeof value === 'string')
+		{
+			bytes += value.length * 2;
+		}
+		else if (typeof value === 'number')
+		{
+			bytes += 8;
+		}
+		else if (typeof value === 'object'
+			&& objectList.indexOf( value ) === -1)
+		{
+			objectList.push(value);
+			for (var i in value)
+			{
+				stack.push(value[i]);
+			}
+		}
+	}
+	return bytes;
+}
+
+},{}],14:[function(require,module,exports){
 
 ThreeUtils = require("./index.js")
 
@@ -42982,7 +43388,187 @@ Atlas.prototype.getSpriteHeight = function(key)
 
 module.exports = Atlas;
 
-},{"./index.js":13}],13:[function(require,module,exports){
+},{"./index.js":16}],15:[function(require,module,exports){
+
+var THREE = require("three");
+var b2Utils = require("../b2utils");
+
+/**
+ * An object that manages drawing debug shapes for bodies in a Box2D world.
+ * @namespace
+ */
+module.exports = b2Debugger =
+{
+	// nested array, indexed by vert count
+	meshes: {},
+
+	transform: new THREE.Object3D(),
+
+	e_shapeBit: 0x0001, ///< draw shapes
+	e_jointBit: 0x0002, ///< draw joint connections
+	e_coreShapeBit: 0x0004, ///< draw core (TOI) shapes
+	e_aabbBit: 0x0008, ///< draw axis aligned bounding boxes
+	e_obbBit: 0x0010, ///< draw oriented bounding boxes
+	e_pairBit: 0x0020, ///< draw broad-phase pairs
+	e_centerOfMassBit: 0x0040, ///< draw center of mass frame
+
+	getGeometry: function(color, vertCount)
+	{
+		if (!this.meshes[vertCount])
+		{
+			this.meshes[vertCount] = [];
+			this.meshes[vertCount].current = 0;
+		}
+
+		var pool = this.meshes[vertCount];
+
+		var index = this.meshes[vertCount].current++;
+		if (!pool[index])
+		{
+			var geometry = new THREE.Geometry();
+			geometry.dynamic = true;
+			for (var i = 0; i < vertCount; i++)
+			{
+				geometry.vertices.push(new THREE.Vector3());
+			}
+
+			var material = new THREE.LineBasicMaterial({ color: 0xffffff });
+			var mesh = new THREE.Line(geometry, material);
+
+			pool[index] = mesh;
+			this.transform.add(mesh);
+		}
+		else
+		{
+			var mesh = pool[index];
+			var material = pool[index].material;
+			var geometry = pool[index].geometry;
+		}
+
+		// set material color
+		color = Box2D.wrapPointer(color, Box2D.b2Color);
+		material.color.setRGB(color.get_r(), color.get_g(), color.get_b());
+
+		mesh.visible = true;
+
+		return geometry;
+	},
+
+	startDrawing: function()
+	{
+		// reset mesh counters
+		for (var i in this.meshes)
+		{
+			this.meshes[i].current = 0;
+		}
+	},
+
+	finishDrawing: function()
+	{
+		// hide excess meshes
+		for (var i in this.meshes)
+		{
+			for (; this.meshes[i].current < this.meshes[i].length; this.meshes[i].current++)
+			{
+				this.meshes[i][this.meshes[i].current].visible = false;
+			}
+		}
+	},
+
+	getDebugDraw: function()
+	{
+		var debugDraw = new Box2D.JSDraw();
+		debugDraw.SetFlags(this.e_shapeBit);
+
+		debugDraw.DrawSegment = function(vert1, vert2, color)
+		{
+			vert1 = Box2D.wrapPointer(vert1, Box2D.b2Vec2);
+			vert2 = Box2D.wrapPointer(vert2, Box2D.b2Vec2);
+			var geometry = b2Debugger.getGeometry(color, 2);
+
+			var x1 = vert1.get_x() * b2Utils.B2_SCALE;
+			var y1 = vert1.get_y() * b2Utils.B2_SCALE;
+			var x2 = vert2.get_x() * b2Utils.B2_SCALE;
+			var y2 = vert2.get_y() * b2Utils.B2_SCALE;
+
+			geometry.vertices[0].set(x1, y1, 0);
+			geometry.vertices[1].set(x2, y2, 0);
+
+			geometry.verticesNeedUpdate = true;
+			geometry.computeBoundingSphere();
+		};
+
+		debugDraw.DrawPolygon = function(vertices, vertexCount, color)
+		{
+			var geometry = b2Debugger.getGeometry(color, vertexCount + 1);
+
+			for (var i = 0; i < vertexCount; i++)
+			{
+				var vert = Box2D.wrapPointer(vertices+(i*8), Box2D.b2Vec2);
+
+				var x = vert.get_x() * b2Utils.B2_SCALE;
+				var y = vert.get_y() * b2Utils.B2_SCALE;
+				geometry.vertices[i].set(x, y, 0);
+			}
+
+			// close by drawing the first vert again
+			var vert = Box2D.wrapPointer(vertices, Box2D.b2Vec2);
+			var x = vert.get_x() * b2Utils.B2_SCALE;
+			var y = vert.get_y() * b2Utils.B2_SCALE;
+			geometry.vertices[i].set(x, y, 0);
+
+			geometry.verticesNeedUpdate = true;
+			geometry.computeBoundingSphere();
+		};
+
+		debugDraw.DrawSolidPolygon = function(vertices, vertexCount, color)
+		{
+			//TODO:
+			this.DrawPolygon(vertices, vertexCount, color);
+		};
+
+		debugDraw.DrawCircle = function(center, radius, color)
+		{
+			var circleRes = 16;
+			var geometry = b2Debugger.getGeometry(color, circleRes + 1);
+
+			var center = Box2D.wrapPointer(center, Box2D.b2Vec2);
+			var cx = center.get_x() * b2Utils.B2_SCALE;
+			var cy = center.get_y() * b2Utils.B2_SCALE;
+
+			for (var i = 0; i < circleRes; i++)
+			{
+				var angle = i * Math.PI * 2 / circleRes;
+				var x = Math.cos(angle) * radius * b2Utils.B2_SCALE + cx;
+				var y = Math.sin(angle) * radius * b2Utils.B2_SCALE + cy;
+				geometry.vertices[i].set(x, y, 0);
+			}
+
+			// close by drawing the first vert again
+			var x = Math.cos(0) * radius * b2Utils.B2_SCALE + cx;
+			var y = Math.sin(0) * radius * b2Utils.B2_SCALE + cy;
+			geometry.vertices[i].set(x, y, 0);
+
+			geometry.verticesNeedUpdate = true;
+			geometry.computeBoundingSphere();
+		};
+
+		debugDraw.DrawSolidCircle = function(center, radius, axis, color)
+		{
+			//TODO:
+			this.DrawCircle(center, radius, color);
+		};
+
+		debugDraw.DrawTransform = function(transform)
+		{
+			//TODO:
+		};
+
+		return debugDraw;
+	}
+}
+
+},{"../b2utils":6,"three":2}],16:[function(require,module,exports){
 
 THREE = require("three");
 
@@ -42995,10 +43581,15 @@ var ThreeUtils =
 	
 	textureLoader: new THREE.TextureLoader(),
 
-	// if set, all calls return dummy objects instead of real visual objects
+	/**
+	 * If set, all calls return dummy objects instead of real visual objects.
+	 * @returns {Boolean}
+	 */
 	serverMode: false,
 
 	Atlas: require("./Atlas.js"),
+
+	b2Debugger: require("./b2debugger.js"),
 
 	/**
 	 * Creates a THREE.Mesh with a unique material.
@@ -43385,4 +43976,4 @@ THREE.Vector3.RightVector = new THREE.Vector3(1, 0, 0);
 THREE.Vector3.UpVector = new THREE.Vector3(0, -1, 0);
 THREE.Vector3.DownVector = new THREE.Vector3(0, 1, 0);
 
-},{"../../data/atlases.js":3,"./Atlas.js":12,"three":2}]},{},[1])
+},{"../../data/atlases.js":3,"./Atlas.js":14,"./b2debugger.js":15,"three":2}]},{},[1])

@@ -89,15 +89,17 @@ var b2Utils =
 	 * @param {Box2D.b2World} world
 	 * @param {Number} x The starting x position of the body in world coordinates.
 	 * @param {Number} y The starting y position of the body in world coordinates.
-	 * @param {Box2D.b2FixtureDef} (Optional) fixtureDef A fixture to add to the body.
+	 * @param {Box2D.b2FixtureDef} fixtureDef (Optional) fixtureDef A fixture to add to the body.
+	 * @param {Box2D.b2BodyDef} bodyDef (Optional) definition to use for the body
 	 * @returns {Box2D.b2Body}
 	 */
-	createStaticBody: function(world, x, y, fixtureDef)
+	createStaticBody: function(world, x, y, fixtureDef, bodyDef)
 	{
+		if (!bodyDef) bodyDef = this.staticBodyDef;
 		this.tempVector2.set_x(x/this.B2_SCALE);
 		this.tempVector2.set_y(y/this.B2_SCALE);
-		this.staticBodyDef.set_position(this.tempVector2);
-		var body = world.CreateBody(this.staticBodyDef);
+		bodyDef.set_position(this.tempVector2);
+		var body = world.CreateBody(bodyDef);
 		if (fixtureDef)
 		{
 			body.CreateFixture(fixtureDef);
@@ -110,15 +112,17 @@ var b2Utils =
 	 * @param {Box2D.b2World} world
 	 * @param {Number} x The starting x position of the body in world coordinates.
 	 * @param {Number} y The starting y position of the body in world coordinates.
-	 * @param {Box2D.b2FixtureDef} fixtureDef A fixture to add to the body.
+	 * @param {Box2D.b2FixtureDef} fixtureDef (Optional) A fixture to add to the body.
+	 * @param {Box2D.b2BodyDef} bodyDef (Optional) definition to use for the body
 	 * @returns {Box2D.b2Body}
 	 */
-	createDynamicBody: function(world, x, y, fixtureDef)
+	createDynamicBody: function(world, x, y, fixtureDef, bodyDef)
 	{
+		if (!bodyDef) bodyDef = this.dynamicBodyDef;
 		this.tempVector2.set_x(x/this.B2_SCALE);
 		this.tempVector2.set_y(y/this.B2_SCALE);
-		this.dynamicBodyDef.set_position(this.tempVector2);
-		var body = world.CreateBody(this.dynamicBodyDef);
+		bodyDef.set_position(this.tempVector2);
+		var body = world.CreateBody(bodyDef);
 		if (fixtureDef)
 		{
 			body.CreateFixture(fixtureDef);
