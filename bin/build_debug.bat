@@ -1,1 +1,1 @@
-browserify index.js > index.bundle.js
+tsc -p tsconfig.json & browserify index.js > index.bundle.js

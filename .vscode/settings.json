@@ -2,6 +2,14 @@
 {
 	"search.exclude": {
 		"**/node_modules": true,
-		"index.bundle.js": true
+		"index.bundle.js": true,
+		"typings/**": true
+	},
+	"files.exclude": {
+		"**/.git": true,
+		"**/.svn": true,
+		"**/.hg": true,
+		"**/.DS_Store": true,
+		"**/*.js": { "when": "$(basename).ts"}
 	}
 }
