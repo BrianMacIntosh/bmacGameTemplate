@@ -3,7 +3,7 @@ module.exports = Gamepad =
 {
 	/**
 	 * Read-only. Set if gamepad data was not found.
-	 * @type {Boolean}
+	 * @type {boolean}
 	 */
 	isHeadless: false,
 
@@ -61,7 +61,7 @@ module.exports = Gamepad =
 
 	/**
 	 * Gets raw information for the gamepad at the specified index.
-	 * @param {Number} index Gamepad index.
+	 * @param {number} index Gamepad index.
 	 */
 	getGamepad: function(index)
 	{
@@ -73,8 +73,8 @@ module.exports = Gamepad =
 
 	/**
 	 * Returns true if there is a gamepad at the specified index.
-	 * @param {Number} index Gamepad index.
-	 * @returns {Boolean}
+	 * @param {number} index Gamepad index.
+	 * @returns {boolean}
 	 */
 	gamepadExists: function(index)
 	{
@@ -86,8 +86,8 @@ module.exports = Gamepad =
 
 	/**
 	 * Returns true if there is a connected gamepad at the specified index.
-	 * @param {Number} index Gamepad index.
-	 * @returns {Boolean}
+	 * @param {number} index Gamepad index.
+	 * @returns {boolean}
 	 */
 	gamepadConnected: function(index)
 	{
@@ -99,8 +99,8 @@ module.exports = Gamepad =
 
 	/**
 	 * Returns true on the frame the specified gamepad presses the specified button.
-	 * @param {Number} index Gamepad index.
-	 * @param {Number} button See constant definitions.
+	 * @param {number} index Gamepad index.
+	 * @param {number} button See constant definitions.
 	 */
 	buttonPressed: function(index, button)
 	{
@@ -109,8 +109,8 @@ module.exports = Gamepad =
 
 	/**
 	 * Returns true on the frame the specified gamepad releases the specified button.
-	 * @param {Number} index Gamepad index.
-	 * @param {Number} button See constant definitions.
+	 * @param {number} index Gamepad index.
+	 * @param {number} button See constant definitions.
 	 */
 	buttonReleased: function(index, button)
 	{
@@ -119,8 +119,8 @@ module.exports = Gamepad =
 
 	/**
 	 * Returns true if the specified button on the specified gamepad is not down.
-	 * @param {Number} index Gamepad index.
-	 * @param {Number} button See constant definitions.
+	 * @param {number} index Gamepad index.
+	 * @param {number} button See constant definitions.
 	 */
 	buttonUp: function(index, button)
 	{
@@ -132,8 +132,8 @@ module.exports = Gamepad =
 
 	/**
 	 * Returns true if the specified button on the specified gamepad is down.
-	 * @param {Number} index Gamepad index.
-	 * @param {Number} button See constant definitions.
+	 * @param {number} index Gamepad index.
+	 * @param {number} button See constant definitions.
 	 */
 	buttonDown: function(index, button)
 	{
@@ -161,8 +161,8 @@ module.exports = Gamepad =
 
 	/**
 	 * Returns the raw value of the specified gamepad button.
-	 * @param {Number} index Gamepad index.
-	 * @param {Number} button See constant definitions.
+	 * @param {number} index Gamepad index.
+	 * @param {number} button See constant definitions.
 	 */
 	buttonValue: function(index, button)
 	{
@@ -174,8 +174,8 @@ module.exports = Gamepad =
 
 	/**
 	 * Returns the value of the specified gamepad axis.
-	 * @param {Number} index Gamepad index.
-	 * @param {Number} axisIndex See constant definitions.
+	 * @param {number} index Gamepad index.
+	 * @param {number} axisIndex See constant definitions.
 	 */
 	getAxis: function(index, axisIndex)
 	{
@@ -203,8 +203,8 @@ module.exports = Gamepad =
 
 	/**
 	 * Returns 1 or -1 on the first frame the specified axis is pressed in that direction, or 0 if it isn't pressed.
-	 * @param {Number} index Gamepad index.
-	 * @param {Number} axisIndex See constant definitions.
+	 * @param {number} index Gamepad index.
+	 * @param {number} axisIndex See constant definitions.
 	 */
 	axisPressed: function(index, axisIndex)
 	{
@@ -230,7 +230,11 @@ module.exports = Gamepad =
 				var state = {};
 				state.buttons = [];
 				state.buttons.length = gamepad.buttons.length;
-				state.axes = gamepad.axes.splice(0);
+				state.axes = [];
+				for (var a = 0; a < gamepad.axes.length; a++)
+				{
+					state.axes[a] = gamepad.axes[a];
+				}
 				for (var b = 0; b < gamepad.buttons.length; b++)
 				{
 					var obj = {pressed:gamepad.buttons[b].pressed, value:gamepad.buttons[b].value};
