@@ -1,12 +1,10 @@
-
+"use strict";
 // load the SDK
-bmacSdk = require("./src/sdk/engine");
-bmacSdk.initialize();
-
+var engine_1 = require("./src/sdk/engine");
+engine_1.bmacSdk.initialize();
 // create a game engine
-GameEngine = new bmacSdk.Engine("canvasDiv");
-
+var GameEngine = engine_1.bmacSdk.createEngine("canvasDiv");
 // add the sample game object to the engine
-GameEngine.addObject(require("./src/game/sample.js"));
-
+var sample_1 = require("./src/game/sample");
+GameEngine.addObject(new sample_1.SampleGame());
 // that's it!

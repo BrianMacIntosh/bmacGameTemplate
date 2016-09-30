@@ -33,7 +33,7 @@ namespace atlas_postbuild
 				{
 					if (!string.IsNullOrEmpty(dataLines[i]))
 					{
-						dataLines[i] = "\"" + dataLines[i].Replace(" = ", "\":[").Replace(' ', ',') + "],";
+						dataLines[i] = "\"" + dataLines[i].Replace(" = ", "\":[").Replace(' ', ',') + "]";
 					}
 				}
 
@@ -82,32 +82,31 @@ namespace atlas_postbuild
 					Console.WriteLine("Created new entry for '" + atlasName + "'");
 					dataStart = atlasLines.Count - 1;
 					int insertPoint = dataStart;
-					atlasLines.Insert(insertPoint++, "\"" + atlasName + "\":");
-					atlasLines.Insert(insertPoint++, "{");
-					atlasLines.Insert(insertPoint++, "	url: \"" + atlasPath + "\",");
-					atlasLines.Insert(insertPoint++, "	width: " + width + ",");
-					atlasLines.Insert(insertPoint++, "	height: " + height + ",");
-					atlasLines.Insert(insertPoint++, "	filter: THREE.LinearFilter,");
-					atlasLines.Insert(insertPoint++, "	sprites:");
-					atlasLines.Insert(insertPoint++, "	{");
+					atlasLines.Insert(insertPoint++, "\t\"" + atlasName + "\":");
+					atlasLines.Insert(insertPoint++, "\t{");
+					atlasLines.Insert(insertPoint++, "\t\t\"url\": \"" + atlasPath + "\",");
+					atlasLines.Insert(insertPoint++, "\t\t\"width\": " + width + ",");
+					atlasLines.Insert(insertPoint++, "\t\t\"height\": " + height + ",");
+					atlasLines.Insert(insertPoint++, "\t\t\"sprites\":");
+					atlasLines.Insert(insertPoint++, "\t\t{");
 					spritesStart = insertPoint;
-					atlasLines.Insert(insertPoint++, "	},");
-					atlasLines.Insert(insertPoint++, "},");
+					atlasLines.Insert(insertPoint++, "\t\t} //sprites");
+					atlasLines.Insert(insertPoint++, "\t},");
 				}
 				else
 				{
 					// update width and height
-					for (int i = dataStart; i < atlasLines.Count && atlasLines[i] != "},"; i++)
+					for (int i = dataStart; i < atlasLines.Count && !atlasLines[i].TrimStart().StartsWith("}"); i++)
 					{
 						if (atlasLines[i].Trim().StartsWith("width:"))
 						{
 							Console.WriteLine("Adjusting width: " + width);
-							atlasLines[i] = "\twidth: " + width + ",";
+							atlasLines[i] = "\t\t\"width\": " + width + ",";
 						}
 						if (atlasLines[i].Trim().StartsWith("height:"))
 						{
 							Console.WriteLine("Adjusting height: " + height);
-							atlasLines[i] = "\theight: " + height + ",";
+							atlasLines[i] = "\t\t\"height\": " + height + ",";
 						}
 					}
 
@@ -115,7 +114,7 @@ namespace atlas_postbuild
 					spritesStart = dataStart;
 					for (; spritesStart < atlasLines.Count; spritesStart++)
 					{
-						if (atlasLines[spritesStart].Trim() == "sprites:")
+						if (atlasLines[spritesStart].Trim() == "\"sprites\":")
 						{
 							spritesStart += 2;
 							break;
@@ -129,17 +128,22 @@ namespace atlas_postbuild
 				}
 
 				// clear sprites
-				while (atlasLines[spritesStart].Trim() != "},")
+				while (atlasLines[spritesStart].Trim() != "} //sprites")
 				{
 					atlasLines.RemoveAt(spritesStart);
 				}
 
 				// insert sprites
-				foreach (string data in dataLines)
+				for (int i = 0; i < dataLines.Length; i++)
 				{
-					if (!string.IsNullOrEmpty(data))
+					if (!string.IsNullOrEmpty(dataLines[i]))
 					{
-						atlasLines.Insert(spritesStart++, "\t" + data);
+						string data = dataLines[i];
+						if (i < dataLines.Length - 1)
+						{
+							data += ",";
+						}
+                        atlasLines.Insert(spritesStart++, "\t\t\t" + data);
 					}
 				}
 			}
