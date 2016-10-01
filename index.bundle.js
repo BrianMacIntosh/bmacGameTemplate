@@ -41840,6 +41840,7 @@ exports.SampleGame = SampleGame;
 "use strict";
 var THREE = require("three");
 var _1 = require("./");
+var box2d_1 = require("../../thirdparty/box2d");
 /**
  * Base class for an object that has three.js visuals and a Box2D body.
  * Visual elements should be parented to 'this.transform'. The position of
@@ -41881,10 +41882,27 @@ var PhysicsLinkedObject = (function () {
      * Updates this object once per frame.
      */
     PhysicsLinkedObject.prototype.update = function (deltaSec) {
+        this.syncTransformToBody();
+    };
+    /**
+     * Moves the THREE transform to match the body position.
+     */
+    PhysicsLinkedObject.prototype.syncTransformToBody = function () {
         if (this.body) {
             var physicsPos = this.body.GetPosition();
             this.transform.position.set(physicsPos.x * _1.b2Utils.B2_SCALE, physicsPos.y * _1.b2Utils.B2_SCALE, this.transform.position.z);
             this.transform.rotation.z = this.body.GetAngle();
+        }
+    };
+    /**
+     * Moves the body position to match the THREE transform.
+     */
+    PhysicsLinkedObject.prototype.syncBodyToTransform = function () {
+        if (this.body) {
+            _1.b2Utils.tempVector2.x = this.transform.position.x / _1.b2Utils.B2_SCALE;
+            _1.b2Utils.tempVector2.y = this.transform.position.y / _1.b2Utils.B2_SCALE;
+            var rotationMatrix = box2d_1.Box2D.b2Mat22.FromAngle(this.transform.rotation.z);
+            this.body.SetTransform(new box2d_1.Box2D.b2Transform(_1.b2Utils.tempVector2, rotationMatrix));
         }
     };
     /**
@@ -41927,7 +41945,7 @@ var PhysicsLinkedObject = (function () {
 exports.PhysicsLinkedObject = PhysicsLinkedObject;
 ;
 
-},{"./":6,"three":3}],6:[function(require,module,exports){
+},{"../../thirdparty/box2d":17,"./":6,"three":3}],6:[function(require,module,exports){
 /**
  * @fileOverview Contains utility functions for interacting with Box2D.
  */

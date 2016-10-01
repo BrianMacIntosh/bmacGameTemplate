@@ -64,12 +64,34 @@ export class PhysicsLinkedObject
 	 */
 	public update(deltaSec: number)
 	{
+		this.syncTransformToBody();
+	}
+
+	/**
+	 * Moves the THREE transform to match the body position.
+	 */
+	public syncTransformToBody()
+	{
 		if (this.body)
 		{
 			var physicsPos = this.body.GetPosition();
 			this.transform.position.set(
 				physicsPos.x * b2Utils.B2_SCALE, physicsPos.y * b2Utils.B2_SCALE, this.transform.position.z);
 			this.transform.rotation.z = this.body.GetAngle();
+		}
+	}
+
+	/**
+	 * Moves the body position to match the THREE transform.
+	 */
+	public syncBodyToTransform()
+	{
+		if (this.body)
+		{
+			b2Utils.tempVector2.x = this.transform.position.x / b2Utils.B2_SCALE;
+			b2Utils.tempVector2.y = this.transform.position.y / b2Utils.B2_SCALE;
+			var rotationMatrix = Box2D.b2Mat22.FromAngle(this.transform.rotation.z);
+			this.body.SetTransform(new Box2D.b2Transform(b2Utils.tempVector2, rotationMatrix));
 		}
 	}
 
