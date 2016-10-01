@@ -1,0 +1,3 @@
+[submodule "src/bmacSdk"]
+	path = src/bmacSdk
+	url = https://github.com/BrianMacIntosh/bmacSdk.git
