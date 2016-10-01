@@ -4,9 +4,9 @@ var __extends = (this && this.__extends) || function (d, b) {
     function __() { this.constructor = d; }
     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 };
-var engine_1 = require("../sdk/engine");
-var threeutils_1 = require("../sdk/threeutils");
-var input_1 = require("../sdk/input");
+var engine_1 = require("../bmacSdk/engine");
+var threeutils_1 = require("../bmacSdk/threeutils");
+var input_1 = require("../bmacSdk/input");
 var SampleGame = (function (_super) {
     __extends(SampleGame, _super);
     function SampleGame() {
@@ -28,10 +28,10 @@ var SampleGame = (function (_super) {
     // 'update' is called by the engine once per frame
     SampleGame.prototype.update = function (deltaSec) {
         // move the mesh 50 pixels per second based on input
-        if (input_1.Keyboard.keyDown('a') || input_1.Keyboard.keyDown(input_1.Keyboard.LEFT)) {
+        if (input_1.Keyboard.keyDown('a') || input_1.Keyboard.keyDown(input_1.Keyboard.Key.Left)) {
             this.mesh.position.x -= 50 * deltaSec;
         }
-        if (input_1.Keyboard.keyDown('d') || input_1.Keyboard.keyDown(input_1.Keyboard.RIGHT)) {
+        if (input_1.Keyboard.keyDown('d') || input_1.Keyboard.keyDown(input_1.Keyboard.Key.Right)) {
             this.mesh.position.x += 50 * deltaSec;
         }
         _super.prototype.update.call(this, deltaSec);

@@ -1,7 +1,7 @@
 
-import { EngineObject } from "../sdk/engine";
-import { ThreeUtils } from "../sdk/threeutils";
-import { Input, Keyboard, Mouse, Gamepad } from "../sdk/input";
+import { EngineObject } from "../bmacSdk/engine";
+import { ThreeUtils } from "../bmacSdk/threeutils";
+import { Input, Keyboard, Mouse, Gamepad } from "../bmacSdk/input";
 
 export class SampleGame extends EngineObject
 {
@@ -31,11 +31,11 @@ export class SampleGame extends EngineObject
 	public update(deltaSec: number)
 	{
 		// move the mesh 50 pixels per second based on input
-		if (Keyboard.keyDown('a') || Keyboard.keyDown(Keyboard.LEFT))
+		if (Keyboard.keyDown('a') || Keyboard.keyDown(Keyboard.Key.Left))
 		{
 			this.mesh.position.x -= 50 * deltaSec;
 		}
-		if (Keyboard.keyDown('d') || Keyboard.keyDown(Keyboard.RIGHT))
+		if (Keyboard.keyDown('d') || Keyboard.keyDown(Keyboard.Key.Right))
 		{
 			this.mesh.position.x += 50 * deltaSec;
 		}

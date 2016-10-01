@@ -1,6 +1,6 @@
 
 // load the SDK
-import { bmacSdk } from "./src/sdk/engine";
+import { bmacSdk } from "./src/bmacSdk/engine";
 bmacSdk.initialize();
 
 // create a game engine
