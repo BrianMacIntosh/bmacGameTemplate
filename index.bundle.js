@@ -4,15 +4,16 @@ module.exports=
 // extra properties can be added to individual atlases and are preserved
 
 {
+	
 	"general":
 	{
 		"url": "media/general_atlas.png",
-		"width": 36,
-		"height": 29,
+		"width": 258,
+		"height": 128,
 		"sprites":
 		{
-			"dirt":[0,0,128,64],
-			"trap":[0,65,35,29]
+			"a":[0,0,128,128],
+			"b":[129,0,128,128]
 		} //sprites
 	},
 }
@@ -29,11 +30,11 @@ var sample_1 = require("./src/game/sample");
 GameEngine.addObject(new sample_1.SampleGame());
 // that's it!
 
-},{"./src/bmacSdk/engine":6,"./src/game/sample":16}],3:[function(require,module,exports){
+},{"./src/bmacSdk/engine":6,"./src/game/sample":17}],3:[function(require,module,exports){
 "use strict";
 var THREE = require("three");
 var _1 = require("./");
-var box2d_1 = require("../../thirdparty/box2d");
+var box2d_1 = require("../thirdparty/box2d");
 /**
  * Base class for an object that has three.js visuals and a Box2D body.
  * Visual elements should be parented to 'this.transform'. The position of
@@ -138,7 +139,7 @@ var PhysicsLinkedObject = (function () {
 exports.PhysicsLinkedObject = PhysicsLinkedObject;
 ;
 
-},{"../../thirdparty/box2d":17,"./":4,"three":11}],4:[function(require,module,exports){
+},{"../thirdparty/box2d":13,"./":4,"three":11}],4:[function(require,module,exports){
 /**
  * @fileOverview Contains utility functions for interacting with Box2D.
  */
@@ -148,7 +149,7 @@ var __extends = (this && this.__extends) || function (d, b) {
     function __() { this.constructor = d; }
     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 };
-var box2d_1 = require("../../thirdparty/box2d");
+var box2d_1 = require("../thirdparty/box2d");
 var PhysicsLinkedObject_1 = require("./PhysicsLinkedObject");
 exports.PhysicsLinkedObject = PhysicsLinkedObject_1.PhysicsLinkedObject;
 var b2Utils;
@@ -353,7 +354,7 @@ var b2Utils;
     b2Utils.getOtherObject = getOtherObject;
 })(b2Utils = exports.b2Utils || (exports.b2Utils = {}));
 
-},{"../../thirdparty/box2d":17,"./PhysicsLinkedObject":3}],5:[function(require,module,exports){
+},{"../thirdparty/box2d":13,"./PhysicsLinkedObject":3}],5:[function(require,module,exports){
 "use strict";
 var THREE = require("three");
 var _1 = require("./");
@@ -43197,610 +43198,6 @@ Array.prototype.contains = Array.prototype.contains || function contains(object)
 };
 
 },{}],13:[function(require,module,exports){
-"use strict";
-var _1 = require("./");
-var Atlas = (function () {
-    /**
-     * Creates a new atlas.
-     * @class
-     * @param {string} url The url of the atlas image.
-     * @param {number} width The pixel width of the image. //TODO: don't require this
-     * @param {number} height The pixel height of the image. //TODO: don't require this
-     * @param {Object} sprites The atlas key data.
-     * @param {boolean} suppressTextureLoad If set, does not automatically load the texture.
-     */
-    function Atlas(data, suppressTextureLoad) {
-        this.url = data.url;
-        this.width = data.width;
-        this.height = data.height;
-        this.sprites = data.sprites;
-        if (!suppressTextureLoad) {
-            this.texture = _1.ThreeUtils.loadTexture(this.url);
-            this.texture.minFilter = this.texture.magFilter = data.filter;
-            _1.ThreeUtils.setTextureNpot(this.texture);
-        }
-    }
-    /**
-     * Returns the width of the given sprite in the atlas.
-     * @param {string} key The sprite key.
-     * @returns {number}
-     */
-    Atlas.prototype.getSpriteWidth = function (key) {
-        return this.sprites[key][2];
-    };
-    /**
-     * Returns the height of the given sprite in the atlas.
-     * @param {string} key The sprite key.
-     * @returns {number}
-     */
-    Atlas.prototype.getSpriteHeight = function (key) {
-        return this.sprites[key][3];
-    };
-    return Atlas;
-}());
-exports.Atlas = Atlas;
-
-},{"./":14}],14:[function(require,module,exports){
-"use strict";
-var THREE = require("three");
-var Atlas_1 = require("./Atlas");
-var Atlas_2 = require("./Atlas");
-exports.Atlas = Atlas_2.Atlas;
-var threejsdebugdraw_1 = require("./threejsdebugdraw");
-exports.ThreeJsDebugDraw = threejsdebugdraw_1.ThreeJsDebugDraw;
-var ThreeUtils;
-(function (ThreeUtils) {
-    ThreeUtils.c_planeCorrection = new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(Math.PI, 0, 0));
-    ThreeUtils.textureLoader = new THREE.TextureLoader();
-    ThreeUtils.tempVector2 = new THREE.Vector2();
-    ThreeUtils.tempVector3 = new THREE.Vector3();
-    /**
-     * If set, all mesh creation calls return dummy objects instead of real visual objects.
-     * @type {boolean}
-     */
-    ThreeUtils.serverMode = false;
-    var textureCache = {};
-    var atlasCache = {};
-    /**
-     * Creates a THREE.Mesh with a unique material.
-     * @param {THREE.Texture} texture Texture for the mesh.
-     * @param {THREE.Geometry} geometry Geometry for the mesh.
-     * @returns {THREE.Object3D}
-     */
-    function makeSpriteMesh(texture, geometry) {
-        if (!(geometry instanceof THREE.Geometry)) {
-            console.error("'geometry' is not a THREE.Geometry.");
-            console.log(geometry);
-            return undefined;
-        }
-        if (ThreeUtils.serverMode) {
-            return new THREE.Object3D();
-        }
-        else {
-            var material = new THREE.MeshBasicMaterial({ map: texture, transparent: true });
-            var mesh = new THREE.Mesh(geometry, material);
-            return mesh;
-        }
-    }
-    ThreeUtils.makeSpriteMesh = makeSpriteMesh;
-    ;
-    /**
-     * Creates a plane mesh with the specified dimensions.
-     * @param {number} width The width of the plane.
-     * @param {number} height The height of the plane.
-     * @returns {THREE.Geometry}
-     */
-    function makeSpriteGeo(width, height) {
-        var geo = new THREE.PlaneGeometry(width, height);
-        geo.applyMatrix(ThreeUtils.c_planeCorrection);
-        return geo;
-    }
-    ThreeUtils.makeSpriteGeo = makeSpriteGeo;
-    ;
-    /**
-     * Calculates the distance between two THREE.Object3D or THREE.Vector3.
-     * @param {THREE.Object3D} thing1
-     * @param {THREE.Object3D} thing2
-     * @returns {number}
-     */
-    function distance(thing1, thing2) {
-        return Math.sqrt(ThreeUtils.distanceSq(thing1, thing2));
-    }
-    ThreeUtils.distance = distance;
-    ;
-    /**
-     * Calculates the squared distance between two THREE.Object3D or THREE.Vector3.
-     * @param {THREE.Object3D|THREE.Vector3} thing1
-     * @param {THREE.Object3D|THREE.Vector3} thing2
-     * @returns {number}
-     */
-    function distanceSq(thing1, thing2) {
-        var x1 = thing1.position !== undefined ? thing1.position.x : thing1.x;
-        var y1 = thing1.position !== undefined ? thing1.position.y : thing1.y;
-        var x2 = thing2.position !== undefined ? thing2.position.x : thing1.x;
-        var y2 = thing2.position !== undefined ? thing2.position.y : thing1.y;
-        var dx = x1 - x2;
-        var dy = y1 - y2;
-        return dx * dx + dy * dy;
-    }
-    ThreeUtils.distanceSq = distanceSq;
-    ;
-    /**
-     * Loads the specified texture. Caches repeated calls.
-     * @param {string} url The URL of the texture.
-     * @returns {THREE.Texture}
-     */
-    function loadTexture(url) {
-        if (ThreeUtils.serverMode) {
-            return undefined;
-        }
-        if (textureCache[url]) {
-            return textureCache[url];
-        }
-        else {
-            textureCache[url] = ThreeUtils.textureLoader.load(url);
-            return textureCache[url];
-        }
-    }
-    ThreeUtils.loadTexture = loadTexture;
-    ;
-    /**
-     * Sets the texture as okay to be non-power-of-two.
-     * @param {THREE.Texture} texture
-     * @returns {THREE.Texture}
-     */
-    function setTextureNpot(texture) {
-        if (texture) {
-            texture.generateMipmaps = false;
-            texture.wrapS = texture.wrapT = THREE.ClampToEdgeWrapping;
-            texture.minFilter = texture.magFilter = THREE.NearestFilter;
-        }
-        return texture;
-    }
-    ThreeUtils.setTextureNpot = setTextureNpot;
-    ;
-    /**
-     * Sets the UVs of the geometry to display the specified tile.
-     * @param {THREE.Geometry} geometry
-     * @param {number} x The x index of the tile.
-     * @param {number} y The y index of the tile.
-     * @param {number} countX The number of tiles horizontally on the image.
-     * @param {number} countY The number of tiles vertically on the image.
-     * @param {boolean} flipX Flip the image horizontally?
-     * @param {boolean} flipY Flip the image vertically?
-     * @returns {THREE.Geometry}
-     */
-    function setTilesheetGeometry(geometry, x, y, countX, countY, flipX, flipY) {
-        var uvs = geometry.faceVertexUvs[0];
-        var l = x / countX;
-        var b = 1 - y / countY;
-        var r = (x + 1) / countX;
-        var t = 1 - (y + 1) / countY;
-        if (flipX) {
-            var temp = l;
-            l = r;
-            r = temp;
-        }
-        if (flipY) {
-            var temp = t;
-            t = b;
-            b = temp;
-        }
-        uvs[0][0].set(l, b);
-        uvs[0][1].set(l, t);
-        uvs[0][2].set(r, b);
-        uvs[1][0].set(l, t);
-        uvs[1][1].set(r, t);
-        uvs[1][2].set(r, b);
-        geometry.uvsNeedUpdate = true;
-        return geometry;
-    }
-    ThreeUtils.setTilesheetGeometry = setTilesheetGeometry;
-    ;
-    /**
-     * Loads the atlas represented by the specified key or returns a cached version.
-     * @param key {string}
-     * @returns {Atlas}
-     */
-    function loadAtlas(key) {
-        var allData = require("../../../data/atlases.json");
-        var atlasData = allData[key];
-        if (atlasData) {
-            if (!atlasCache[atlasData.url]) {
-                atlasCache[atlasData.url] = new Atlas_1.Atlas(atlasData);
-            }
-            return atlasCache[atlasData.url];
-        }
-        else {
-            console.error("Tried to load unknown atlas '" + key + "'.");
-            return null;
-        }
-    }
-    ThreeUtils.loadAtlas = loadAtlas;
-    ;
-    /**
-     * Sets an HTML div to display an image in an atlas.
-     * @param {HTMLElement} element The element to configure.
-     * @param {Atlas} atlas The atlas to us.
-     * @param {string} key The key to use from the atlas.
-     * @returns {HTMLElement}
-     */
-    function setElementToAtlasImage(element, atlas, key) {
-        // set icon using background position
-        var atlasCoords = atlas.sprites[key];
-        if (atlasCoords === undefined) {
-            atlasCoords = atlas.sprites["missing"];
-        }
-        if (atlasCoords !== undefined) {
-            element.style["background-image"] = "url(\"" + atlas.url + "\")";
-            element.style["background-position"] = (-atlasCoords[0]) + "px " + (-atlasCoords[1]) + "px";
-            element.style["width"] = atlasCoords[2] + "px";
-            element.style["height"] = atlasCoords[3] + "px";
-        }
-        return element;
-    }
-    ThreeUtils.setElementToAtlasImage = setElementToAtlasImage;
-    ;
-    /**
-     * Creates a mesh for the given sprite in the atlas.
-     * @param {ThreeUtils.Atlas} atlas
-     * @param {string} key
-     * @param {boolean} dynamic Set if you want to be able to flip the sprite or dynamically switch its texture.
-     */
-    function makeAtlasMesh(atlas, key, dynamic) {
-        if (atlas.sprites[key] === undefined) {
-            console.error("Atlas '" + atlas.url + "' has no key '" + key + "'.");
-            return null;
-        }
-        if (!atlas.sprites[key].geo) {
-            atlas.sprites[key].geo = makeSpriteGeo(atlas.sprites[key][2], atlas.sprites[key][3]);
-            _setAtlasUVs(atlas.sprites[key].geo, atlas, key);
-        }
-        var geo = atlas.sprites[key].geo;
-        if (dynamic) {
-            geo = geo.clone();
-            geo.dynamic = true;
-            geo.atlas_flipx = false;
-            geo.atlas_flipy = false;
-        }
-        var mesh = ThreeUtils.makeSpriteMesh(atlas.texture, geo);
-        mesh.atlas = atlas;
-        mesh.atlas_key = key;
-        return mesh;
-    }
-    ThreeUtils.makeAtlasMesh = makeAtlasMesh;
-    ;
-    function _setAtlasUVs(geometry, atlas, key, flipX, flipY) {
-        if (!atlas) {
-            console.error("Geometry is not atlased.");
-            return geometry;
-        }
-        if (atlas.sprites[key] === undefined) {
-            console.error("Atlas '" + atlas.url + "' has not key '" + key + "'");
-            return geometry;
-        }
-        var uvs = geometry.faceVertexUvs[0];
-        var l = atlas.sprites[key][0] / atlas.width;
-        var b = (1 - atlas.sprites[key][1] / atlas.height);
-        var r = l + atlas.sprites[key][2] / atlas.width;
-        var t = b - atlas.sprites[key][3] / atlas.height;
-        if (geometry.atlas_flipx) {
-            var temp = l;
-            l = r;
-            r = temp;
-        }
-        if (geometry.atlas_flipy) {
-            var temp = t;
-            t = b;
-            b = temp;
-        }
-        uvs[0][0].set(l, b);
-        uvs[0][1].set(l, t);
-        uvs[0][2].set(r, b);
-        uvs[1][0].set(l, t);
-        uvs[1][1].set(r, t);
-        uvs[1][2].set(r, b);
-        geometry.uvsNeedUpdate = true;
-        return geometry;
-    }
-    ;
-    /**
-     * Sets the UVs of the specified geometry to display the specified atlas sprite.
-     * @param {THREE.Geometry} geometry
-     * @param {ThreeUtils.Atlas} atlas
-     * @param {string} key
-     * @param {boolean} flipX
-     * @param {boolean} flipY
-     */
-    function setAtlasGeometry(geometry, atlas, key, flipX, flipY) {
-        if (!atlas) {
-            console.error("Geometry is not atlased.");
-            return geometry;
-        }
-        if (atlas.sprites[key] === undefined) {
-            console.error("Atlas '" + atlas.url + "' has not key '" + key + "'");
-            return geometry;
-        }
-        _setAtlasUVs(geometry, atlas, key, flipX, flipY);
-        var w = atlas.sprites[key][2] / 2;
-        var h = atlas.sprites[key][3] / 2;
-        var verts = geometry.vertices;
-        verts[0].set(-w, -h, 0);
-        verts[1].set(w, -h, 0);
-        verts[2].set(-w, h, 0);
-        verts[3].set(w, h, 0);
-        geometry.verticesNeedUpdate = true;
-        return geometry;
-    }
-    ThreeUtils.setAtlasGeometry = setAtlasGeometry;
-    ;
-    /**
-     * Sets the flipped state of the specified atlas mesh.
-     * @param {THREE.Mesh} mesh
-     * @param {boolean} flipX
-     * @param {boolean} flipY
-     */
-    function setAtlasMeshFlip(mesh, flipX, flipY) {
-        if (!mesh.geometry) {
-            return mesh;
-        }
-        if (!mesh.geometry.dynamic) {
-            console.error("Geometry is not dynamic.");
-            return;
-        }
-        if (flipX == mesh.geometry.atlas_flipx && flipY == mesh.geometry.atlas_flipy)
-            return;
-        mesh.geometry.atlas_flipx = flipX;
-        mesh.geometry.atlas_flipy = flipY;
-        _setAtlasUVs(mesh.geometry, mesh.atlas, mesh.atlas_key);
-        return mesh;
-    }
-    ThreeUtils.setAtlasMeshFlip = setAtlasMeshFlip;
-    ;
-    /**
-     * Sets the UVs of the specified atlas mesh to the specified sprite key.
-     * @param {THREE.Mesh} mesh
-     * @param {string} key
-     */
-    function setAtlasMeshKey(mesh, key) {
-        if (!mesh.geometry) {
-            return;
-        }
-        if (!mesh.geometry.dynamic) {
-            console.error("Geometry is not dynamic.");
-            return;
-        }
-        if (key === mesh.atlas_key)
-            return;
-        mesh.atlas_key = key;
-        setAtlasGeometry(mesh.geometry, mesh.atlas, mesh.atlas_key);
-        return mesh;
-    }
-    ThreeUtils.setAtlasMeshKey = setAtlasMeshKey;
-    ;
-    /**
-     * Returns true if the line passing through a and b intersects the specified circle.
-     * @param {THREE.Vector2} a
-     * @param {THREE.Vector2} b
-     * @param {THREE.Vector2} center The center of the circle.
-     * @param {number} radius The radius of the circle.
-     */
-    function lineCircleIntersection(a, b, center, radius) {
-        var attackVector = new THREE.Vector2().set(b.x - a.x, b.y - a.y);
-        var meToTargetVector = new THREE.Vector2().set(center.x - a.x, center.y - a.y);
-        attackVector = attackVector.clone().normalize().multiplyScalar(meToTargetVector.dot(attackVector));
-        attackVector = attackVector.sub(center).add(a);
-        return attackVector.lengthSq() <= radius * radius;
-    }
-    ThreeUtils.lineCircleIntersection = lineCircleIntersection;
-    ;
-    /**
-     * Returns true if the line segment from a to b intersects the specified circle.
-     * @param {THREE.Vector2} a
-     * @param {THREE.Vector2} b
-     * @param {THREE.Vector2} center The center of the circle.
-     * @param {number} radius The radius of the circle.
-     */
-    function lineSegmentCircleIntersection(a, b, center, radius) {
-        var attackVector = new THREE.Vector2().set(b.x - a.x, b.y - a.y);
-        var segmentLengthSq = attackVector.lengthSq();
-        var meToTargetVector = new THREE.Vector2().set(center.x - a.x, center.y - a.y);
-        attackVector = attackVector.clone().normalize().multiplyScalar(meToTargetVector.dot(attackVector));
-        var d = meToTargetVector.dot(attackVector);
-        // circle is behind the segment
-        if (d < 0)
-            return false;
-        attackVector.normalize().multiplyScalar(d);
-        // check that the segment range is correct
-        var projectionLengthSq = attackVector.lengthSq();
-        if (projectionLengthSq > segmentLengthSq) {
-            return false;
-        }
-        // check that the line is within the circle
-        attackVector = attackVector.sub(center).add(a);
-        return attackVector.lengthSq() <= radius * radius;
-    }
-    ThreeUtils.lineSegmentCircleIntersection = lineSegmentCircleIntersection;
-    ;
-})(ThreeUtils = exports.ThreeUtils || (exports.ThreeUtils = {}));
-
-},{"../../../data/atlases.json":1,"./Atlas":13,"./threejsdebugdraw":15,"three":11}],15:[function(require,module,exports){
-"use strict";
-var __extends = (this && this.__extends) || function (d, b) {
-    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
-    function __() { this.constructor = d; }
-    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-};
-var THREE = require("three");
-var b2utils_1 = require("../b2utils");
-var box2d_1 = require("../../thirdparty/box2d");
-/**
- * An object that manages drawing debug shapes for bodies in a Box2D world.
- * @namespace
- */
-var ThreeJsDebugDraw = (function (_super) {
-    __extends(ThreeJsDebugDraw, _super);
-    function ThreeJsDebugDraw() {
-        _super.apply(this, arguments);
-        // nested array, indexed by vert count
-        this.meshPools = {};
-        this.poolIndices = {};
-        this.transform = new THREE.Object3D();
-    }
-    ThreeJsDebugDraw.prototype.getGeometry = function (color, vertCount) {
-        if (!this.meshPools[vertCount]) {
-            this.meshPools[vertCount] = [];
-            this.poolIndices[vertCount] = 0;
-        }
-        var pool = this.meshPools[vertCount];
-        var mesh;
-        var geometry;
-        var index = this.poolIndices[vertCount]++;
-        if (!pool[index]) {
-            geometry = new THREE.Geometry();
-            for (var i = 0; i < vertCount; i++) {
-                geometry.vertices.push(new THREE.Vector3());
-            }
-            var lineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff });
-            mesh = new THREE.Line(geometry, lineMaterial);
-            pool[index] = mesh;
-            this.transform.add(mesh);
-        }
-        else {
-            mesh = pool[index];
-            var material = pool[index].material;
-            material.color.setRGB(color.r, color.g, color.b);
-            geometry = pool[index].geometry;
-        }
-        mesh.visible = true;
-        return geometry;
-    };
-    ;
-    ThreeJsDebugDraw.prototype.startDrawing = function () {
-        // reset mesh counters
-        for (var i in this.meshPools) {
-            this.poolIndices[i] = 0;
-        }
-    };
-    ;
-    ThreeJsDebugDraw.prototype.finishDrawing = function () {
-        // hide excess meshPools
-        for (var i in this.meshPools) {
-            for (; this.poolIndices[i] < this.meshPools[i].length; this.poolIndices[i]++) {
-                this.meshPools[i][this.poolIndices[i]].visible = false;
-            }
-        }
-    };
-    ;
-    ThreeJsDebugDraw.prototype.DrawSegment = function (vert1, vert2, color) {
-        var geometry = this.getGeometry(color, 2);
-        var x1 = vert1.x * b2utils_1.b2Utils.B2_SCALE;
-        var y1 = vert1.y * b2utils_1.b2Utils.B2_SCALE;
-        var x2 = vert2.x * b2utils_1.b2Utils.B2_SCALE;
-        var y2 = vert2.y * b2utils_1.b2Utils.B2_SCALE;
-        geometry.vertices[0].set(x1, y1, 0);
-        geometry.vertices[1].set(x2, y2, 0);
-        geometry.verticesNeedUpdate = true;
-        geometry.computeBoundingSphere();
-    };
-    ;
-    ThreeJsDebugDraw.prototype.DrawPolygon = function (vertices, vertexCount, color) {
-        var geometry = this.getGeometry(color, vertexCount + 1);
-        for (var i = 0; i < vertexCount; i++) {
-            var x = vertices[i].x * b2utils_1.b2Utils.B2_SCALE;
-            var y = vertices[i].y * b2utils_1.b2Utils.B2_SCALE;
-            geometry.vertices[i].set(x, y, 0);
-        }
-        // close by drawing the first vert again
-        var x = vertices[i].x * b2utils_1.b2Utils.B2_SCALE;
-        var y = vertices[i].y * b2utils_1.b2Utils.B2_SCALE;
-        geometry.vertices[i].set(x, y, 0);
-        geometry.verticesNeedUpdate = true;
-        geometry.computeBoundingSphere();
-    };
-    ;
-    ThreeJsDebugDraw.prototype.DrawSolidPolygon = function (vertices, vertexCount, color) {
-        //TODO:
-        this.DrawPolygon(vertices, vertexCount, color);
-    };
-    ;
-    ThreeJsDebugDraw.prototype.DrawCircle = function (center, radius, color) {
-        var circleRes = 16;
-        var geometry = this.getGeometry(color, circleRes + 1);
-        var cx = center.x * b2utils_1.b2Utils.B2_SCALE;
-        var cy = center.y * b2utils_1.b2Utils.B2_SCALE;
-        for (var i = 0; i < circleRes; i++) {
-            var angle = i * Math.PI * 2 / circleRes;
-            var x = Math.cos(angle) * radius * b2utils_1.b2Utils.B2_SCALE + cx;
-            var y = Math.sin(angle) * radius * b2utils_1.b2Utils.B2_SCALE + cy;
-            geometry.vertices[i].set(x, y, 0);
-        }
-        // close by drawing the first vert again
-        var x = Math.cos(0) * radius * b2utils_1.b2Utils.B2_SCALE + cx;
-        var y = Math.sin(0) * radius * b2utils_1.b2Utils.B2_SCALE + cy;
-        geometry.vertices[i].set(x, y, 0);
-        geometry.verticesNeedUpdate = true;
-        geometry.computeBoundingSphere();
-    };
-    ;
-    ThreeJsDebugDraw.prototype.DrawSolidCircle = function (center, radius, axis, color) {
-        //TODO:
-        this.DrawCircle(center, radius, color);
-    };
-    ;
-    ThreeJsDebugDraw.prototype.DrawTransform = function (transform) {
-        //TODO:
-    };
-    ;
-    return ThreeJsDebugDraw;
-}(box2d_1.Box2D.b2DebugDraw));
-exports.ThreeJsDebugDraw = ThreeJsDebugDraw;
-
-},{"../../thirdparty/box2d":17,"../b2utils":4,"three":11}],16:[function(require,module,exports){
-"use strict";
-var __extends = (this && this.__extends) || function (d, b) {
-    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
-    function __() { this.constructor = d; }
-    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-};
-var engine_1 = require("../bmacSdk/engine");
-var threeutils_1 = require("../bmacSdk/threeutils");
-var input_1 = require("../bmacSdk/input");
-var SampleGame = (function (_super) {
-    __extends(SampleGame, _super);
-    function SampleGame() {
-        _super.apply(this, arguments);
-    }
-    // 'added' is called by the engine when this object is added
-    SampleGame.prototype.added = function () {
-        this.dirtTexture = threeutils_1.ThreeUtils.loadTexture("media/dirt.png");
-        this.dirtGeo = threeutils_1.ThreeUtils.makeSpriteGeo(128, 64);
-        this.mesh = threeutils_1.ThreeUtils.makeSpriteMesh(this.dirtTexture, this.dirtGeo);
-        this.mesh.position.set(200, 200, -10);
-        this.owner.scene.add(this.mesh);
-    };
-    ;
-    // 'removed' is called by the engine when this object is removed
-    SampleGame.prototype.removed = function () {
-    };
-    ;
-    // 'update' is called by the engine once per frame
-    SampleGame.prototype.update = function (deltaSec) {
-        // move the mesh 50 pixels per second based on input
-        if (input_1.Keyboard.keyDown('a') || input_1.Keyboard.keyDown(input_1.Keyboard.Key.Left)) {
-            this.mesh.position.x -= 50 * deltaSec;
-        }
-        if (input_1.Keyboard.keyDown('d') || input_1.Keyboard.keyDown(input_1.Keyboard.Key.Right)) {
-            this.mesh.position.x += 50 * deltaSec;
-        }
-        _super.prototype.update.call(this, deltaSec);
-    };
-    ;
-    return SampleGame;
-}(engine_1.EngineObject));
-exports.SampleGame = SampleGame;
-
-},{"../bmacSdk/engine":6,"../bmacSdk/input":8,"../bmacSdk/threeutils":14}],17:[function(require,module,exports){
 /*
 * Copyright (c) 2006-2007 Erin Catto http://www.gphysics.com
 *
@@ -54665,4 +54062,631 @@ Box2D.postDefs = [];
 var i;
 for (i = 0; i < Box2D.postDefs.length; ++i) Box2D.postDefs[i]();
 delete Box2D.postDefs;
-},{}]},{},[2]);
+},{}],14:[function(require,module,exports){
+"use strict";
+var _1 = require("./");
+var Atlas = (function () {
+    /**
+     * Creates a new atlas.
+     * @class
+     * @param {string} url The url of the atlas image.
+     * @param {number} width The pixel width of the image. //TODO: don't require this
+     * @param {number} height The pixel height of the image. //TODO: don't require this
+     * @param {Object} sprites The atlas key data.
+     * @param {boolean} suppressTextureLoad If set, does not automatically load the texture.
+     */
+    function Atlas(data, suppressTextureLoad) {
+        this.url = data.url;
+        this.width = data.width;
+        this.height = data.height;
+        this.sprites = data.sprites;
+        if (!suppressTextureLoad) {
+            this.texture = _1.ThreeUtils.loadTexture(this.url);
+            this.texture.minFilter = this.texture.magFilter = data.filter;
+            _1.ThreeUtils.setTextureNpot(this.texture);
+        }
+    }
+    /**
+     * Returns the width of the given sprite in the atlas.
+     * @param {string} key The sprite key.
+     * @returns {number}
+     */
+    Atlas.prototype.getSpriteWidth = function (key) {
+        return this.sprites[key][2];
+    };
+    /**
+     * Returns the height of the given sprite in the atlas.
+     * @param {string} key The sprite key.
+     * @returns {number}
+     */
+    Atlas.prototype.getSpriteHeight = function (key) {
+        return this.sprites[key][3];
+    };
+    return Atlas;
+}());
+exports.Atlas = Atlas;
+
+},{"./":15}],15:[function(require,module,exports){
+"use strict";
+var THREE = require("three");
+exports.THREE = THREE;
+var Atlas_1 = require("./Atlas");
+var Atlas_2 = require("./Atlas");
+exports.Atlas = Atlas_2.Atlas;
+var threejsdebugdraw_1 = require("./threejsdebugdraw");
+exports.ThreeJsDebugDraw = threejsdebugdraw_1.ThreeJsDebugDraw;
+var ThreeUtils;
+(function (ThreeUtils) {
+    ThreeUtils.c_planeCorrection = new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(Math.PI, 0, 0));
+    ThreeUtils.textureLoader = new THREE.TextureLoader();
+    ThreeUtils.tempVector2 = new THREE.Vector2();
+    ThreeUtils.tempVector3 = new THREE.Vector3();
+    /**
+     * If set, all mesh creation calls return dummy objects instead of real visual objects.
+     * @type {boolean}
+     */
+    ThreeUtils.serverMode = false;
+    var textureCache = {};
+    var atlasCache = {};
+    /**
+     * Creates a THREE.Mesh with a unique material.
+     * @param {THREE.Texture} texture Texture for the mesh.
+     * @param {THREE.Geometry} geometry Geometry for the mesh.
+     * @returns {THREE.Object3D}
+     */
+    function makeSpriteMesh(texture, geometry) {
+        if (!(geometry instanceof THREE.Geometry)) {
+            console.error("'geometry' is not a THREE.Geometry.");
+            console.log(geometry);
+            return undefined;
+        }
+        if (ThreeUtils.serverMode) {
+            return new THREE.Object3D();
+        }
+        else {
+            var material = new THREE.MeshBasicMaterial({ map: texture, transparent: true });
+            var mesh = new THREE.Mesh(geometry, material);
+            return mesh;
+        }
+    }
+    ThreeUtils.makeSpriteMesh = makeSpriteMesh;
+    ;
+    /**
+     * Creates a plane mesh with the specified dimensions.
+     * @param {number} width The width of the plane.
+     * @param {number} height The height of the plane.
+     * @returns {THREE.Geometry}
+     */
+    function makeSpriteGeo(width, height) {
+        var geometry = new THREE.PlaneGeometry(width, height);
+        geometry.applyMatrix(ThreeUtils.c_planeCorrection);
+        return geometry;
+    }
+    ThreeUtils.makeSpriteGeo = makeSpriteGeo;
+    ;
+    /**
+     * Calculates the distance between two THREE.Object3D or THREE.Vector3.
+     * @param {THREE.Object3D} thing1
+     * @param {THREE.Object3D} thing2
+     * @returns {number}
+     */
+    function distance(thing1, thing2) {
+        return Math.sqrt(ThreeUtils.distanceSq(thing1, thing2));
+    }
+    ThreeUtils.distance = distance;
+    ;
+    /**
+     * Calculates the squared distance between two THREE.Object3D or THREE.Vector3.
+     * @param {THREE.Object3D|THREE.Vector3} thing1
+     * @param {THREE.Object3D|THREE.Vector3} thing2
+     * @returns {number}
+     */
+    function distanceSq(thing1, thing2) {
+        var x1 = thing1.position !== undefined ? thing1.position.x : thing1.x;
+        var y1 = thing1.position !== undefined ? thing1.position.y : thing1.y;
+        var x2 = thing2.position !== undefined ? thing2.position.x : thing1.x;
+        var y2 = thing2.position !== undefined ? thing2.position.y : thing1.y;
+        var dx = x1 - x2;
+        var dy = y1 - y2;
+        return dx * dx + dy * dy;
+    }
+    ThreeUtils.distanceSq = distanceSq;
+    ;
+    /**
+     * Loads the specified texture. Caches repeated calls.
+     * @param {string} url The URL of the texture.
+     * @returns {THREE.Texture}
+     */
+    function loadTexture(url) {
+        if (ThreeUtils.serverMode) {
+            return undefined;
+        }
+        if (textureCache[url]) {
+            return textureCache[url];
+        }
+        else {
+            textureCache[url] = ThreeUtils.textureLoader.load(url);
+            return textureCache[url];
+        }
+    }
+    ThreeUtils.loadTexture = loadTexture;
+    ;
+    /**
+     * Sets the texture as okay to be non-power-of-two.
+     * @param {THREE.Texture} texture
+     * @returns {THREE.Texture}
+     */
+    function setTextureNpot(texture) {
+        if (texture) {
+            texture.generateMipmaps = false;
+            texture.wrapS = texture.wrapT = THREE.ClampToEdgeWrapping;
+            texture.minFilter = texture.magFilter = THREE.NearestFilter;
+        }
+        return texture;
+    }
+    ThreeUtils.setTextureNpot = setTextureNpot;
+    ;
+    /**
+     * Sets the UVs of the geometry to display the specified tile.
+     * @param {THREE.Geometry} geometry
+     * @param {number} x The x index of the tile.
+     * @param {number} y The y index of the tile.
+     * @param {number} countX The number of tiles horizontally on the image.
+     * @param {number} countY The number of tiles vertically on the image.
+     * @param {boolean} flipX Flip the image horizontally?
+     * @param {boolean} flipY Flip the image vertically?
+     * @returns {THREE.Geometry}
+     */
+    function setTilesheetGeometry(geometry, x, y, countX, countY, flipX, flipY) {
+        var uvs = geometry.faceVertexUvs[0];
+        var l = x / countX;
+        var b = 1 - y / countY;
+        var r = (x + 1) / countX;
+        var t = 1 - (y + 1) / countY;
+        if (flipX) {
+            var temp = l;
+            l = r;
+            r = temp;
+        }
+        if (flipY) {
+            var temp = t;
+            t = b;
+            b = temp;
+        }
+        uvs[0][0].set(l, b);
+        uvs[0][1].set(l, t);
+        uvs[0][2].set(r, b);
+        uvs[1][0].set(l, t);
+        uvs[1][1].set(r, t);
+        uvs[1][2].set(r, b);
+        geometry.uvsNeedUpdate = true;
+        return geometry;
+    }
+    ThreeUtils.setTilesheetGeometry = setTilesheetGeometry;
+    ;
+    /**
+     * Loads the atlas represented by the specified key or returns a cached version.
+     * @param key {string}
+     * @returns {Atlas}
+     */
+    function loadAtlas(key) {
+        var allData = require("../../../data/atlases.json");
+        var atlasData = allData[key];
+        if (atlasData) {
+            if (!atlasCache[atlasData.url]) {
+                atlasCache[atlasData.url] = new Atlas_1.Atlas(atlasData);
+            }
+            return atlasCache[atlasData.url];
+        }
+        else {
+            console.error("Tried to load unknown atlas '" + key + "'.");
+            return null;
+        }
+    }
+    ThreeUtils.loadAtlas = loadAtlas;
+    ;
+    /**
+     * Sets an HTML div to display an image in an atlas.
+     * @param {HTMLElement} element The element to configure.
+     * @param {Atlas} atlas The atlas to us.
+     * @param {string} key The key to use from the atlas.
+     * @returns {HTMLElement}
+     */
+    function setElementToAtlasImage(element, atlas, key) {
+        // set icon using background position
+        var atlasCoords = atlas.sprites[key];
+        if (atlasCoords === undefined) {
+            atlasCoords = atlas.sprites["missing"];
+        }
+        if (atlasCoords !== undefined) {
+            element.style["background-image"] = "url(\"" + atlas.url + "\")";
+            element.style["background-position"] = (-atlasCoords[0]) + "px " + (-atlasCoords[1]) + "px";
+            element.style["width"] = atlasCoords[2] + "px";
+            element.style["height"] = atlasCoords[3] + "px";
+        }
+        return element;
+    }
+    ThreeUtils.setElementToAtlasImage = setElementToAtlasImage;
+    ;
+    /**
+     * Creates a mesh for the given sprite in the atlas.
+     * @param {Atlas} atlas
+     * @param {string} key
+     * @param {boolean} dynamic Set if you want to be able to flip the sprite or dynamically switch its texture.
+     */
+    function makeAtlasMesh(atlas, key, dynamic) {
+        if (atlas.sprites[key] === undefined) {
+            console.error("Atlas '" + atlas.url + "' has no key '" + key + "'.");
+            return null;
+        }
+        if (!atlas.sprites[key].geometry) {
+            atlas.sprites[key].geometry = makeSpriteGeo(atlas.sprites[key][2], atlas.sprites[key][3]);
+            _setAtlasUVs(atlas.sprites[key].geometry, atlas, key);
+        }
+        if (!atlas.material) {
+            atlas.material = new THREE.MeshBasicMaterial({
+                map: atlas.texture, transparent: true });
+        }
+        var geometry;
+        if (dynamic) {
+            geometry = makeSpriteGeo(atlas.sprites[key][2], atlas.sprites[key][3]);
+            _setAtlasUVs(geometry, atlas, key);
+            geometry.dynamic = true;
+            geometry.atlas_flipx = false;
+            geometry.atlas_flipy = false;
+        }
+        else {
+            geometry = atlas.sprites[key].geometry;
+        }
+        var mesh = new THREE.Mesh(geometry, atlas.material);
+        mesh.atlas = atlas;
+        mesh.atlas_key = key;
+        return mesh;
+    }
+    ThreeUtils.makeAtlasMesh = makeAtlasMesh;
+    ;
+    function _setAtlasUVs(geometry, atlas, key, flipX, flipY) {
+        if (!atlas) {
+            console.error("Geometry is not atlased.");
+            return geometry;
+        }
+        if (atlas.sprites[key] === undefined) {
+            console.error("Atlas '" + atlas.url + "' has not key '" + key + "'");
+            return geometry;
+        }
+        var uvs = geometry.faceVertexUvs[0];
+        var l = atlas.sprites[key][0] / atlas.width;
+        var b = (1 - atlas.sprites[key][1] / atlas.height);
+        var r = l + atlas.sprites[key][2] / atlas.width;
+        var t = b - atlas.sprites[key][3] / atlas.height;
+        if (geometry.atlas_flipx) {
+            var temp = l;
+            l = r;
+            r = temp;
+        }
+        if (geometry.atlas_flipy) {
+            var temp = t;
+            t = b;
+            b = temp;
+        }
+        uvs[0][0].set(l, b);
+        uvs[0][1].set(l, t);
+        uvs[0][2].set(r, b);
+        uvs[1][0].set(l, t);
+        uvs[1][1].set(r, t);
+        uvs[1][2].set(r, b);
+        geometry.uvsNeedUpdate = true;
+        return geometry;
+    }
+    ;
+    /**
+     * Sets the UVs of the specified geometry to display the specified atlas sprite.
+     * @param {THREE.Geometry} geometry
+     * @param {ThreeUtils.Atlas} atlas
+     * @param {string} key
+     * @param {boolean} flipX
+     * @param {boolean} flipY
+     */
+    function setAtlasGeometry(geometry, atlas, key, flipX, flipY) {
+        if (!atlas) {
+            console.error("Geometry is not atlased.");
+            return geometry;
+        }
+        if (atlas.sprites[key] === undefined) {
+            console.error("Atlas '" + atlas.url + "' has not key '" + key + "'");
+            return geometry;
+        }
+        _setAtlasUVs(geometry, atlas, key, flipX, flipY);
+        var w = atlas.sprites[key][2] / 2;
+        var h = atlas.sprites[key][3] / 2;
+        var verts = geometry.vertices;
+        verts[0].set(-w, -h, 0);
+        verts[1].set(w, -h, 0);
+        verts[2].set(-w, h, 0);
+        verts[3].set(w, h, 0);
+        geometry.verticesNeedUpdate = true;
+        return geometry;
+    }
+    ThreeUtils.setAtlasGeometry = setAtlasGeometry;
+    ;
+    /**
+     * Sets the flipped state of the specified atlas mesh.
+     * @param {THREE.Mesh} mesh
+     * @param {boolean} flipX
+     * @param {boolean} flipY
+     */
+    function setAtlasMeshFlip(mesh, flipX, flipY) {
+        if (!mesh.geometry) {
+            return mesh;
+        }
+        if (!mesh.geometry.dynamic) {
+            console.error("Geometry is not dynamic.");
+            return;
+        }
+        if (flipX == mesh.geometry.atlas_flipx && flipY == mesh.geometry.atlas_flipy)
+            return;
+        mesh.geometry.atlas_flipx = flipX;
+        mesh.geometry.atlas_flipy = flipY;
+        _setAtlasUVs(mesh.geometry, mesh.atlas, mesh.atlas_key);
+        return mesh;
+    }
+    ThreeUtils.setAtlasMeshFlip = setAtlasMeshFlip;
+    ;
+    /**
+     * Sets the UVs of the specified atlas mesh to the specified sprite key.
+     * @param {THREE.Mesh} mesh
+     * @param {string} key
+     */
+    function setAtlasMeshKey(mesh, key) {
+        if (!mesh.geometry) {
+            return;
+        }
+        if (!mesh.geometry.dynamic) {
+            console.error("Geometry is not dynamic.");
+            return;
+        }
+        if (key === mesh.atlas_key)
+            return;
+        mesh.atlas_key = key;
+        setAtlasGeometry(mesh.geometry, mesh.atlas, mesh.atlas_key);
+        return mesh;
+    }
+    ThreeUtils.setAtlasMeshKey = setAtlasMeshKey;
+    ;
+    /**
+     * Returns true if the line passing through a and b intersects the specified circle.
+     * @param {THREE.Vector2} a
+     * @param {THREE.Vector2} b
+     * @param {THREE.Vector2} center The center of the circle.
+     * @param {number} radius The radius of the circle.
+     */
+    function lineCircleIntersection(a, b, center, radius) {
+        var attackVector = new THREE.Vector2().set(b.x - a.x, b.y - a.y);
+        var meToTargetVector = new THREE.Vector2().set(center.x - a.x, center.y - a.y);
+        attackVector = attackVector.clone().normalize().multiplyScalar(meToTargetVector.dot(attackVector));
+        attackVector = attackVector.sub(center).add(a);
+        return attackVector.lengthSq() <= radius * radius;
+    }
+    ThreeUtils.lineCircleIntersection = lineCircleIntersection;
+    ;
+    /**
+     * Returns true if the line segment from a to b intersects the specified circle.
+     * @param {THREE.Vector2} a
+     * @param {THREE.Vector2} b
+     * @param {THREE.Vector2} center The center of the circle.
+     * @param {number} radius The radius of the circle.
+     */
+    function lineSegmentCircleIntersection(a, b, center, radius) {
+        var attackVector = new THREE.Vector2().set(b.x - a.x, b.y - a.y);
+        var segmentLengthSq = attackVector.lengthSq();
+        var meToTargetVector = new THREE.Vector2().set(center.x - a.x, center.y - a.y);
+        attackVector = attackVector.clone().normalize().multiplyScalar(meToTargetVector.dot(attackVector));
+        var d = meToTargetVector.dot(attackVector);
+        // circle is behind the segment
+        if (d < 0)
+            return false;
+        attackVector.normalize().multiplyScalar(d);
+        // check that the segment range is correct
+        var projectionLengthSq = attackVector.lengthSq();
+        if (projectionLengthSq > segmentLengthSq) {
+            return false;
+        }
+        // check that the line is within the circle
+        attackVector = attackVector.sub(center).add(a);
+        return attackVector.lengthSq() <= radius * radius;
+    }
+    ThreeUtils.lineSegmentCircleIntersection = lineSegmentCircleIntersection;
+    ;
+})(ThreeUtils = exports.ThreeUtils || (exports.ThreeUtils = {}));
+
+},{"../../../data/atlases.json":1,"./Atlas":14,"./threejsdebugdraw":16,"three":11}],16:[function(require,module,exports){
+"use strict";
+var __extends = (this && this.__extends) || function (d, b) {
+    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+    function __() { this.constructor = d; }
+    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+};
+var THREE = require("three");
+var b2utils_1 = require("../b2utils");
+var box2d_1 = require("../thirdparty/box2d");
+/**
+ * An object that manages drawing debug shapes for bodies in a Box2D world.
+ * @namespace
+ */
+var ThreeJsDebugDraw = (function (_super) {
+    __extends(ThreeJsDebugDraw, _super);
+    function ThreeJsDebugDraw() {
+        _super.apply(this, arguments);
+        // nested array, indexed by vert count
+        this.meshPools = {};
+        this.poolIndices = {};
+        this.transform = new THREE.Object3D();
+    }
+    ThreeJsDebugDraw.prototype.getGeometry = function (color, vertCount) {
+        if (!this.meshPools[vertCount]) {
+            this.meshPools[vertCount] = [];
+            this.poolIndices[vertCount] = 0;
+        }
+        var pool = this.meshPools[vertCount];
+        var mesh;
+        var geometry;
+        var index = this.poolIndices[vertCount]++;
+        if (!pool[index]) {
+            geometry = new THREE.Geometry();
+            for (var i = 0; i < vertCount; i++) {
+                geometry.vertices.push(new THREE.Vector3());
+            }
+            var lineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff });
+            mesh = new THREE.Line(geometry, lineMaterial);
+            pool[index] = mesh;
+            this.transform.add(mesh);
+        }
+        else {
+            mesh = pool[index];
+            var material = pool[index].material;
+            material.color.setRGB(color.r, color.g, color.b);
+            geometry = pool[index].geometry;
+        }
+        mesh.visible = true;
+        return geometry;
+    };
+    ;
+    ThreeJsDebugDraw.prototype.startDrawing = function () {
+        // reset mesh counters
+        for (var i in this.meshPools) {
+            this.poolIndices[i] = 0;
+        }
+    };
+    ;
+    ThreeJsDebugDraw.prototype.finishDrawing = function () {
+        // hide excess meshPools
+        for (var i in this.meshPools) {
+            for (; this.poolIndices[i] < this.meshPools[i].length; this.poolIndices[i]++) {
+                this.meshPools[i][this.poolIndices[i]].visible = false;
+            }
+        }
+    };
+    ;
+    ThreeJsDebugDraw.prototype.DrawSegment = function (vert1, vert2, color) {
+        var geometry = this.getGeometry(color, 2);
+        var x1 = vert1.x * b2utils_1.b2Utils.B2_SCALE;
+        var y1 = vert1.y * b2utils_1.b2Utils.B2_SCALE;
+        var x2 = vert2.x * b2utils_1.b2Utils.B2_SCALE;
+        var y2 = vert2.y * b2utils_1.b2Utils.B2_SCALE;
+        geometry.vertices[0].set(x1, y1, 0);
+        geometry.vertices[1].set(x2, y2, 0);
+        geometry.verticesNeedUpdate = true;
+        geometry.computeBoundingSphere();
+    };
+    ;
+    ThreeJsDebugDraw.prototype.DrawPolygon = function (vertices, vertexCount, color) {
+        var geometry = this.getGeometry(color, vertexCount + 1);
+        for (var i = 0; i < vertexCount; i++) {
+            var x = vertices[i].x * b2utils_1.b2Utils.B2_SCALE;
+            var y = vertices[i].y * b2utils_1.b2Utils.B2_SCALE;
+            geometry.vertices[i].set(x, y, 0);
+        }
+        // close by drawing the first vert again
+        var x = vertices[i].x * b2utils_1.b2Utils.B2_SCALE;
+        var y = vertices[i].y * b2utils_1.b2Utils.B2_SCALE;
+        geometry.vertices[i].set(x, y, 0);
+        geometry.verticesNeedUpdate = true;
+        geometry.computeBoundingSphere();
+    };
+    ;
+    ThreeJsDebugDraw.prototype.DrawSolidPolygon = function (vertices, vertexCount, color) {
+        //TODO:
+        this.DrawPolygon(vertices, vertexCount, color);
+    };
+    ;
+    ThreeJsDebugDraw.prototype.DrawCircle = function (center, radius, color) {
+        var circleRes = 16;
+        var geometry = this.getGeometry(color, circleRes + 1);
+        var cx = center.x * b2utils_1.b2Utils.B2_SCALE;
+        var cy = center.y * b2utils_1.b2Utils.B2_SCALE;
+        for (var i = 0; i < circleRes; i++) {
+            var angle = i * Math.PI * 2 / circleRes;
+            var x = Math.cos(angle) * radius * b2utils_1.b2Utils.B2_SCALE + cx;
+            var y = Math.sin(angle) * radius * b2utils_1.b2Utils.B2_SCALE + cy;
+            geometry.vertices[i].set(x, y, 0);
+        }
+        // close by drawing the first vert again
+        var x = Math.cos(0) * radius * b2utils_1.b2Utils.B2_SCALE + cx;
+        var y = Math.sin(0) * radius * b2utils_1.b2Utils.B2_SCALE + cy;
+        geometry.vertices[i].set(x, y, 0);
+        geometry.verticesNeedUpdate = true;
+        geometry.computeBoundingSphere();
+    };
+    ;
+    ThreeJsDebugDraw.prototype.DrawSolidCircle = function (center, radius, axis, color) {
+        //TODO:
+        this.DrawCircle(center, radius, color);
+    };
+    ;
+    ThreeJsDebugDraw.prototype.DrawTransform = function (transform) {
+        //TODO:
+    };
+    ;
+    return ThreeJsDebugDraw;
+}(box2d_1.Box2D.b2DebugDraw));
+exports.ThreeJsDebugDraw = ThreeJsDebugDraw;
+
+},{"../b2utils":4,"../thirdparty/box2d":13,"three":11}],17:[function(require,module,exports){
+"use strict";
+var __extends = (this && this.__extends) || function (d, b) {
+    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+    function __() { this.constructor = d; }
+    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+};
+var engine_1 = require("../bmacSdk/engine");
+var threeutils_1 = require("../bmacSdk/threeutils");
+var input_1 = require("../bmacSdk/input");
+var SampleGame = (function (_super) {
+    __extends(SampleGame, _super);
+    function SampleGame() {
+        _super.apply(this, arguments);
+        this.c_planeCorrection = new threeutils_1.THREE.Matrix4().makeRotationFromEuler(new threeutils_1.THREE.Euler(Math.PI, 0, 0));
+    }
+    // 'added' is called by the engine when this object is added
+    SampleGame.prototype.added = function () {
+        /*this.mesh = ThreeUtils.makeAtlasMesh(ThreeUtils.loadAtlas("general"), "a", true);
+        this.mesh.position.set(200, 200, -10);
+        this.owner.scene.add(this.mesh);
+
+        this.mesh2 = ThreeUtils.makeAtlasMesh(ThreeUtils.loadAtlas("general"), "b", true);
+        this.mesh2.position.set(200, 0, -10);
+        this.owner.scene.add(this.mesh2);*/
+        var loader = new threeutils_1.THREE.TextureLoader();
+        var geometry3 = new threeutils_1.THREE.PlaneGeometry(64, 128);
+        geometry3.applyMatrix(this.c_planeCorrection);
+        this.mesh3 = new threeutils_1.THREE.Mesh(geometry3, new threeutils_1.THREE.MeshBasicMaterial({ map: loader.load("atlas-raw/general/a.png") }));
+        this.mesh3.position.set(0, 0, -10);
+        this.owner.scene.add(this.mesh3);
+        var geometry4 = new threeutils_1.THREE.PlaneGeometry(256, 128);
+        geometry4.applyMatrix(this.c_planeCorrection);
+        this.mesh4 = new threeutils_1.THREE.Mesh(geometry4, new threeutils_1.THREE.MeshBasicMaterial({ map: loader.load("atlas-raw/general/b.png") }));
+        this.mesh4.position.set(0, 200, -10);
+        this.owner.scene.add(this.mesh4);
+    };
+    ;
+    // 'removed' is called by the engine when this object is removed
+    SampleGame.prototype.removed = function () {
+    };
+    ;
+    // 'update' is called by the engine once per frame
+    SampleGame.prototype.update = function (deltaSec) {
+        // move the mesh 50 pixels per second based on input
+        if (input_1.Keyboard.keyDown('a') || input_1.Keyboard.keyDown(input_1.Keyboard.Key.Left)) {
+            this.mesh4.position.x -= 50 * deltaSec;
+        }
+        if (input_1.Keyboard.keyDown('d') || input_1.Keyboard.keyDown(input_1.Keyboard.Key.Right)) {
+            this.mesh4.position.x += 50 * deltaSec;
+        }
+        _super.prototype.update.call(this, deltaSec);
+    };
+    ;
+    return SampleGame;
+}(engine_1.EngineObject));
+exports.SampleGame = SampleGame;
+
+},{"../bmacSdk/engine":6,"../bmacSdk/input":8,"../bmacSdk/threeutils":15}]},{},[2]);

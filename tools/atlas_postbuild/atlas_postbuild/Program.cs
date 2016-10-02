@@ -98,12 +98,12 @@ namespace atlas_postbuild
 					// update width and height
 					for (int i = dataStart; i < atlasLines.Count && !atlasLines[i].TrimStart().StartsWith("}"); i++)
 					{
-						if (atlasLines[i].Trim().StartsWith("width:"))
+						if (atlasLines[i].Trim().StartsWith("\"width\":"))
 						{
 							Console.WriteLine("Adjusting width: " + width);
 							atlasLines[i] = "\t\t\"width\": " + width + ",";
 						}
-						if (atlasLines[i].Trim().StartsWith("height:"))
+						if (atlasLines[i].Trim().StartsWith("\"height\":"))
 						{
 							Console.WriteLine("Adjusting height: " + height);
 							atlasLines[i] = "\t\t\"height\": " + height + ",";
